@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+sqlalchemy
+pandas
+streamlit
+pyecharts
+faker
+openai
+scikit-learn
+joblib
+matplotlib

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="utf-8">
+<script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+</head>
+
+<body style="background:#0b1d33;color:white">
+
+<h1>智慧停车可视化大屏</h1>
+
+<div id="predict" style="height:500px;width:100%"></div>
+
+<script>
+
+    window.onload = async function(){
+    
+        console.log("页面加载完成")
+    
+        let res = await fetch("http://127.0.0.1:8000/predict")
+        let data = await res.json()
+    
+        let hours = data.map(i => i.hour)
+        let cars = data.map(i => i.predicted_cars)
+    
+        let dom = document.getElementById("predict")
+    
+        console.log("DOM尺寸:", dom.clientWidth, dom.clientHeight)
+    
+        let chart = echarts.init(dom)
+    
+        chart.setOption({
+            title:{
+                text:"未来停车需求预测",
+                textStyle:{color:"white"}
+            },
+            tooltip:{},
+            xAxis:{
+                type:"category",
+                data:hours
+            },
+            yAxis:{
+                type:"value"
+            },
+            series:[
+                {
+                    name:"车辆预测",
+                    type:"line",
+                    data:cars,
+                    smooth:true
+                }
+            ]
+        })
+    
+    }
+    
+    </script>
+
+</body>
+</html>
