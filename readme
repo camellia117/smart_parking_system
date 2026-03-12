@@ -33,12 +33,19 @@ streamlit run dashboard/dashboard.py
 
 运行后，你的默认浏览器会自动打开一个网页（通常是 http://localhost:8501）。
 
-第三步：查看 HTML 智慧大屏 (screen.html)
+
+第三步 终端 3：启动实时的“引擎”（数据模拟器）
+
+python mock_data/realtime_simulator.py
+
+第四步：查看 HTML 智慧大屏 (screen.html)
 这个是纯前端的 HTML 文件，查看方式非常简单：
 方法 A（直接打开）：
 在 Cursor 左侧的文件树中，找到 data_screen/screen.html 文件。在你的电脑文件夹里直接双击它，或者把它拖拽到 Chrome/Edge 浏览器中即可打开。
 方法 B（使用 Cursor/VSCode 插件 - 推荐）：
 如果你安装了 Live Server 插件，可以右键点击 screen.html 文件，选择 "Open with Live Server"。这样不仅能在浏览器中查看科技感大屏，如果你后续修改了 HTML 代码，浏览器还会自动刷新
+
+
 
 ___________________________________________________________________________________
 更新 GitHub 的正确操作
@@ -50,6 +57,8 @@ git add .
 
 git commit -m "update dashboard and data logic"
 
+这一句的作用是：给这次修改做一个版本记录
+
 说明文字可以随便写，例如：
 update dashboard UI
 fix parking data bug
@@ -60,3 +69,8 @@ update prediction logic
 git push
 
 执行完刷新 GitHub 页面就能看到更新。
+——————————————————————————————————————————————
+快速看 SSH key,可以用,Windows 会直接用记事本打开，复制更方便。
+
+notepad %USERPROFILE%\.ssh\id_ed25519.pub
+——————————————————————————————————————————————

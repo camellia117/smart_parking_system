@@ -36,26 +36,49 @@ with st.sidebar:
     st.caption("🌐 API 连接: 正常")
 
 # 数据获取函数
-@st.cache_data(ttl=10)
+# 修改前：@st.cache_data(ttl=10)
+@st.cache_data(ttl=1)  # 【修改】：缓存降至1秒，确保拿到最新实时数据
 def fetch_data(endpoint):
     try:
         return requests.get(f"http://127.0.0.1:8000/{endpoint}").json()
     except:
         return None
-
 # ==================== 页面 1: 实时监控大盘 ====================
 if menu == "📊 实时监控大盘":
     st.title("📊 城市级实时监控大盘")
+    
+    # 1. 先获取并渲染数据
     stats = fetch_data("statistics")
     
     if stats:
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("🅿️ 今日入场车辆", f"{stats.get('records', 0)} 辆", "+12% 较昨日")
-        c2.metric("💰 今日实时流水", f"¥ {stats.get('total_revenue', 0):.2f}", "+5.4%")
+        c1.metric("🅿️ 累计服务车次", f"{stats.get('records', 0)} 辆", "+12% 较昨日")
+        c2.metric("💰 实时累计流水", f"¥ {stats.get('total_revenue', 0):.2f}", "+5.4%")
         c3.metric("⏱️ 平均驻留时长", f"{stats.get('avg_parking_time', 0):.1f} h", "-0.2 h")
         c4.metric("🚨 违停警告", "3 起", "已派发保安", delta_color="inverse")
         
         st.markdown("<br>", unsafe_allow_html=True)
+        
+        # 全市核心停车场实时状态面板
+        st.subheader("🏙️ 城市路网停车场实时 API 监控")
+        lots_data = fetch_data("lots")
+        if lots_data:
+            lots_df = pd.DataFrame(lots_data)
+            # 计算占用率
+            lots_df['占用率'] = ((lots_df['total_spaces'] - lots_df['available_spaces']) / lots_df['total_spaces'] * 100).round(1)
+            
+            # 使用更美观的列展示
+            lot_cols = st.columns(len(lots_df))
+            for idx, row in lots_df.iterrows():
+                with lot_cols[idx]:
+                    st.markdown(f"**{row['name']}**")
+                    st.caption(f"📍 {row['location']} | 费率: ¥{row['price_per_hour']}/h")
+                    # 如果车位极少，显示红色警告
+                    color = "normal" if row['占用率'] < 90 else "inverse"
+                    st.metric("实时余位", f"{row['available_spaces']} / {row['total_spaces']}", f"占用: {row['占用率']}%", delta_color=color)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        
         col1, col2 = st.columns((2, 1))
         with col1:
             st.subheader("🌐 AI 24小时流量预测曲线")
@@ -71,10 +94,12 @@ if menu == "📊 实时监控大盘":
                 st.warning("暂无预测数据")
         with col2:
             st.subheader("📷 关键通道实时快照")
-            # 占位图片，模拟监控画面
             st.image("https://images.unsplash.com/photo-1506521781263-d8422e82f27a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", caption="主入口 A 区", use_container_width=True)
             st.image("https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", caption="地下 B 区", use_container_width=True)
 
+    # 2. 所有 UI 渲染完毕后，最后执行刷新命令
+    time.sleep(2)  # 页面停留2秒
+    st.rerun()     # 重新从头运行脚本，实现动态刷新
 # ==================== 页面 2: 车辆放行与记录 ====================
 elif menu == "🚘 车辆放行与记录":
     st.title("🚘 车辆通行管理中心")

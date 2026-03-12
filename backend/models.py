@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Float, DateTime
 from backend.database import Base
 
 
+
 class User(Base):
 
     __tablename__ = "users"
@@ -21,6 +22,7 @@ class ParkingLot(Base):
     location = Column(String)
     total_spaces = Column(Integer)
     price_per_hour = Column(Float)
+    available_spaces = Column(Integer)  
 
 
 class ParkingRecord(Base):
@@ -31,5 +33,5 @@ class ParkingRecord(Base):
     user_id = Column(Integer)
     lot_id = Column(Integer)
     enter_time = Column(DateTime)
-    leave_time = Column(DateTime)
+    leave_time = Column(DateTime, nullable=True) 
     fee = Column(Float)
