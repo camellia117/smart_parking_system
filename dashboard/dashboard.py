@@ -6,103 +6,99 @@ import time
 from streamlit_autorefresh import st_autorefresh
 
 # ==================== 0. 页面基础与状态配置 ====================
-st.set_page_config(page_title="智慧停车管控中枢 V6", layout="wide", page_icon="🌌")
+st.set_page_config(page_title="智慧停车管控中枢 V8", layout="wide", page_icon="🌌")
 st_autorefresh(interval=3000, key="dashboard_autorefresh")
 
-# 用于记录上一秒的数据，精准判定谁该动画
 if 'dashboard_memory' not in st.session_state:
     st.session_state.dashboard_memory = {}
 
-# ==================== 1. 大师级全局 CSS (绝不乱跳版) ====================
+# ==================== 1. 大师级全局 CSS ====================
+# 这里将第一行顶格，避免触发 Markdown 的代码块机制
 st.markdown("""
-    <style>
-    .main {background-color: #050914;}
-    .stApp {background-image: radial-gradient(circle at 50% 0%, #111a2f 0%, #050914 80%);}
-    h1, h2, h3 {color: #ffffff !important; font-family: 'Arial', sans-serif; text-shadow: 0 0 10px rgba(255,255,255,0.2);}
-    .css-1d391kg {background-color: #0a0f1d !important; border-right: 1px solid #1f3a5f;}
-    
-    /* 专属高级拟态卡片：取消物理位移，采用单纯的 Scale 缩放，绝不影响排版！ */
-    .custom-card {
-        background: linear-gradient(145deg, rgba(20, 30, 50, 0.9), rgba(10, 15, 30, 0.8));
-        border: 1px solid rgba(0, 234, 255, 0.15); 
-        padding: 20px 15px; 
-        border-radius: 16px; 
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-        margin-bottom: 1rem;
-        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease, border-color 0.3s ease;
-        /* 防止内部元素溢出导致卡片变形 */
-        overflow: hidden; 
-    }
-    
-    /* 鼠标悬停：微微放大浮出，且发光 */
-    .custom-card:hover { 
-        transform: scale(1.05); /* 核心！只会放大，不推挤别人 */
-        border-color: #00eaff; 
-        box-shadow: 0 10px 30px rgba(0,234,255,0.25); 
-        z-index: 10;
-    }
-    
-    /* 【核心修复】：数字容器高度死死锁住！overflow:hidden 确保数字像老虎机一样在内部滚动，外壳岿然不动 */
-    .value-box { height: 50px; width: 100%; display: flex; align-items: center; overflow: hidden; margin: 5px 0; }
-    .lot-value-box { height: 40px; } 
+<style>
+.main {background-color: #050914;}
+.stApp {background-image: radial-gradient(circle at 50% 0%, #111a2f 0%, #050914 80%);}
+h1, h2, h3 {color: #ffffff !important; font-family: 'Arial', sans-serif; text-shadow: 0 0 10px rgba(255,255,255,0.2);}
+.css-1d391kg {background-color: #0a0f1d !important; border-right: 1px solid #1f3a5f;}
 
-    /* 文字与指标样式 */
-    .c-label { font-size: 1.05rem; color: #8cb6f5; font-weight: bold;}
-    .c-value { font-size: 2.6rem; font-weight: 900; color: #ffffff; text-shadow: 0 0 15px rgba(0,234,255,0.3); line-height: 1;}
-    .lot-val { font-size: 2.1rem; }
-    
-    .c-delta { font-size: 0.9rem; color: #ffeb7b; font-weight: bold;}
-    .c-delta.down { color: #ff4683; }
+.custom-card {
+    box-sizing: border-box;
+    background: linear-gradient(145deg, rgba(20, 30, 50, 0.9), rgba(10, 15, 30, 0.8));
+    border: 1px solid rgba(0, 234, 255, 0.15); 
+    padding: 20px 15px; 
+    border-radius: 16px; 
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    margin-bottom: 1rem;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease, border-color 0.3s ease;
+    overflow: hidden; 
+}
 
-    /* 停车场名片防撑破排版 */
-    .lot-title { font-size: 1.15rem; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px;}
-    .lot-loc { font-size: 0.85rem; color: #8cb6f5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-    
-    /* 可视化容量进度条 */
-    .progress-bg { background: rgba(255,255,255,0.1); border-radius: 6px; width: 100%; height: 8px; margin: 12px 0; overflow: hidden;}
-    .progress-bar { height: 100%; border-radius: 6px; box-shadow: 0 0 8px currentColor; transition: width 0.5s ease; }
-    </style>
+/* 绝对固定高度，杜绝跳动 */
+.top-card { height: 160px; }
+.lot-card { height: 230px; }
+
+.custom-card:hover { 
+    transform: scale(1.05); 
+    border-color: #00eaff; 
+    box-shadow: 0 10px 30px rgba(0,234,255,0.25); 
+    z-index: 10;
+}
+
+.value-box { height: 50px; width: 100%; display: flex; align-items: center; overflow: hidden; margin: 5px 0; }
+.lot-value-box { height: 40px; } 
+
+.c-label { font-size: 1.05rem; color: #8cb6f5; font-weight: bold;}
+.c-value { font-size: 2.6rem; font-weight: 900; color: #ffffff; text-shadow: 0 0 15px rgba(0,234,255,0.3); line-height: 1; display: inline-block;}
+.lot-val { font-size: 2.1rem; }
+
+.c-delta { font-size: 0.9rem; color: #ffeb7b; font-weight: bold;}
+.c-delta.down { color: #ff4683; }
+
+.lot-title { font-size: 1.15rem; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px;}
+.lot-loc { font-size: 0.85rem; color: #8cb6f5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+
+.progress-bg { background: rgba(255,255,255,0.1); border-radius: 6px; width: 100%; height: 8px; margin: 12px 0; overflow: hidden;}
+.progress-bar { height: 100%; border-radius: 6px; box-shadow: 0 0 8px currentColor; transition: width 0.5s ease; }
+</style>
 """, unsafe_allow_html=True)
 
 # ==================== 2. Python 智能渲染引擎 ====================
-def generate_pop_animation(run_id):
-    # 老虎机般的垂直滚入动画，纯粹的 Y 轴移动，绝对不改变元素高度
-    return f"""
-    <style>
-    @keyframes slotRoll_{run_id} {{
-        0% {{ transform: translateY(-30px); opacity: 0; color: #00eaff; }}
-        80% {{ transform: translateY(2px); }}
-        100% {{ transform: translateY(0); opacity: 1; color: #ffffff; }}
-    }}
-    </style>
-    """
-
 def render_animated_metric(label, value, delta, key_id, is_down=False):
     old_val = st.session_state.dashboard_memory.get(key_id)
     changed = (old_val is not None) and (str(old_val) != str(value))
     st.session_state.dashboard_memory[key_id] = str(value)
     
     anim_css = ""
+    style_block = ""
     if changed:
         run_id = int(time.time() * 1000)
         anim_css = f"animation: slotRoll_{run_id} 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;"
-        st.markdown(generate_pop_animation(run_id), unsafe_allow_html=True)
+        # 这里的 CSS 也全部顶格写！
+        style_block = f"""
+<style>
+@keyframes slotRoll_{run_id} {{
+0% {{ transform: translateY(-30px); opacity: 0; color: #00eaff; }}
+80% {{ transform: translateY(2px); }}
+100% {{ transform: translateY(0); opacity: 1; color: #ffffff; }}
+}}
+</style>
+"""
         
     delta_class = "c-delta down" if is_down else "c-delta"
     
-    html = f"""
-    <div class="custom-card">
-        <div class="c-label">{label}</div>
-        <div class="value-box">
-            <div class="c-value" style="{anim_css}">{value}</div>
-        </div>
-        <div class="{delta_class}">{delta}</div>
-    </div>
-    """
+    # 【核心修复】：所有的 HTML 标签全部顶格，坚决不留哪怕一个空格缩进！
+    html = f"""{style_block}
+<div class="custom-card top-card">
+<div class="c-label">{label}</div>
+<div class="value-box">
+<div class="c-value" style="{anim_css}">{value}</div>
+</div>
+<div class="{delta_class}">{delta}</div>
+</div>
+"""
     st.markdown(html, unsafe_allow_html=True)
 
 def render_lot_card(row, key_id):
-    # 极度安全的取值法，防止字段缺失导致页面崩溃
     name = row.get('name', '未知停车场')
     loc = row.get('location', '未知位置')
     price = row.get('price_per_hour', 0)
@@ -116,32 +112,39 @@ def render_lot_card(row, key_id):
     st.session_state.dashboard_memory[key_id] = str(value_str)
     
     anim_css = ""
+    style_block = ""
     if changed:
         run_id = int(time.time() * 1000)
         anim_css = f"animation: slotRoll_{run_id} 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;"
-        st.markdown(generate_pop_animation(run_id), unsafe_allow_html=True)
+        style_block = f"""
+<style>
+@keyframes slotRoll_{run_id} {{
+0% {{ transform: translateY(-30px); opacity: 0; color: #00eaff; }}
+80% {{ transform: translateY(2px); }}
+100% {{ transform: translateY(0); opacity: 1; color: #ffffff; }}
+}}
+</style>
+"""
 
-    # 安全计算占用率，防止除零报错导致卡片消失
     ratio = 0 if total == 0 else avail / total
     ratio_pct = int((1 - ratio) * 100) 
     bar_color = "#ff4683" if ratio_pct >= 90 else "#00eaff"
 
-    html = f"""
-    <div class="custom-card">
-        <div class="lot-title">{name}</div>
-        <div class="lot-loc">📍 {loc} | ¥{price}/h</div>
-        
-        <div class="progress-bg">
-            <div class="progress-bar" style="width:{ratio_pct}%; background:{bar_color}; color:{bar_color};"></div>
-        </div>
-        
-        <div class="c-label">实时余位</div>
-        <div class="value-box lot-value-box">
-            <div class="c-value lot-val" style="{anim_css}">{value_str}</div>
-        </div>
-        <div class="c-delta {'down' if ratio_pct>=90 else ''}">占用: {ratio_pct}%</div>
-    </div>
-    """
+    # 【核心修复】：所有的 HTML 标签全部顶格，坚决不留哪怕一个空格缩进！
+    html = f"""{style_block}
+<div class="custom-card lot-card">
+<div class="lot-title">{name}</div>
+<div class="lot-loc">📍 {loc} | ¥{price}/h</div>
+<div class="progress-bg">
+<div class="progress-bar" style="width:{ratio_pct}%; background:{bar_color};"></div>
+</div>
+<div class="c-label">实时余位</div>
+<div class="value-box lot-value-box">
+<div class="c-value lot-val" style="{anim_css}">{value_str}</div>
+</div>
+<div class="c-delta {'down' if ratio_pct>=90 else ''}">占用: {ratio_pct}%</div>
+</div>
+"""
     st.markdown(html, unsafe_allow_html=True)
 
 # ==================== 3. 导航与接口 ====================
@@ -178,19 +181,17 @@ if menu == "📊 实时监控大盘":
         st.subheader("🏙️ 城市路网停车场实时阵列")
         lots_data = fetch_data("lots")
         
-        # 兜底防御：明确展示数据获取状态，彻底终结“为何不显示”的谜团
         if lots_data is not None:
             if len(lots_data) > 0:
                 lots_df = pd.DataFrame(lots_data)
                 lot_cols = st.columns(len(lots_df))
                 for idx, row in lots_df.iterrows():
                     with lot_cols[idx]:
-                        # 取 id 或者 index 作为唯一标识
                         render_lot_card(row, f"lot_{row.get('id', idx)}")
             else:
-                st.info("ℹ️ 数据库中暂无停车场数据。请检查是否成功运行了 mock_data/realtime_simulator.py 脚本。")
+                st.info("ℹ️ 数据库中暂无停车场数据。")
         else:
-            st.error("❌ 无法连接到后端获取停车场数据，请检查后端 FastAPI 服务是否启动且未报错。")
+            st.error("❌ 无法连接到后端获取停车场数据。")
 
         st.markdown("<br>", unsafe_allow_html=True)
         
