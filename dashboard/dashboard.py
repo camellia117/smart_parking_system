@@ -1,261 +1,159 @@
 import streamlit as st
-import requests
 import pandas as pd
-import plotly.express as px
-import time
-from streamlit_autorefresh import st_autorefresh
+import joblib
+import os
+import sys
 
-# ==================== 0. 页面基础与状态配置 ====================
-st.set_page_config(page_title="智慧停车管控中枢 V8", layout="wide", page_icon="🌌")
-st_autorefresh(interval=3000, key="dashboard_autorefresh")
+# 【关键设置】将项目根目录添加到搜索路径，解决模块导入 (ModuleNotFoundError) 问题
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-if 'dashboard_memory' not in st.session_state:
-    st.session_state.dashboard_memory = {}
+from backend.database import SessionLocal
+from backend.models import SystemUser, ParkingRecord
 
-# ==================== 1. 大师级全局 CSS ====================
-# 这里将第一行顶格，避免触发 Markdown 的代码块机制
-st.markdown("""
-<style>
-.main {background-color: #050914;}
-.stApp {background-image: radial-gradient(circle at 50% 0%, #111a2f 0%, #050914 80%);}
-h1, h2, h3 {color: #ffffff !important; font-family: 'Arial', sans-serif; text-shadow: 0 0 10px rgba(255,255,255,0.2);}
-.css-1d391kg {background-color: #0a0f1d !important; border-right: 1px solid #1f3a5f;}
+# 配置 Streamlit 页面的标题和宽屏布局
+st.set_page_config(page_title="AI-Parking 开发者大本营", page_icon="👨‍💻", layout="wide")
 
-.custom-card {
-    box-sizing: border-box;
-    background: linear-gradient(145deg, rgba(20, 30, 50, 0.9), rgba(10, 15, 30, 0.8));
-    border: 1px solid rgba(0, 234, 255, 0.15); 
-    padding: 20px 15px; 
-    border-radius: 16px; 
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    margin-bottom: 1rem;
-    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease, border-color 0.3s ease;
-    overflow: hidden; 
-}
+# ================= 侧边栏导航 =================
+st.sidebar.title("👨‍💻 开发者核心中枢")
+st.sidebar.markdown("---")
+menu = st.sidebar.radio("📌 请选择控制台功能", ["🧠 AI 模型深度分析", "🔐 系统账号权限管理"])
 
-/* 绝对固定高度，杜绝跳动 */
-.top-card { height: 160px; }
-.lot-card { height: 230px; }
-
-.custom-card:hover { 
-    transform: scale(1.05); 
-    border-color: #00eaff; 
-    box-shadow: 0 10px 30px rgba(0,234,255,0.25); 
-    z-index: 10;
-}
-
-.value-box { height: 50px; width: 100%; display: flex; align-items: center; overflow: hidden; margin: 5px 0; }
-.lot-value-box { height: 40px; } 
-
-.c-label { font-size: 1.05rem; color: #8cb6f5; font-weight: bold;}
-.c-value { font-size: 2.6rem; font-weight: 900; color: #ffffff; text-shadow: 0 0 15px rgba(0,234,255,0.3); line-height: 1; display: inline-block;}
-.lot-val { font-size: 2.1rem; }
-
-.c-delta { font-size: 0.9rem; color: #ffeb7b; font-weight: bold;}
-.c-delta.down { color: #ff4683; }
-
-.lot-title { font-size: 1.15rem; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px;}
-.lot-loc { font-size: 0.85rem; color: #8cb6f5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-
-.progress-bg { background: rgba(255,255,255,0.1); border-radius: 6px; width: 100%; height: 8px; margin: 12px 0; overflow: hidden;}
-.progress-bar { height: 100%; border-radius: 6px; box-shadow: 0 0 8px currentColor; transition: width 0.5s ease; }
-</style>
-""", unsafe_allow_html=True)
-
-# ==================== 2. Python 智能渲染引擎 ====================
-def render_animated_metric(label, value, delta, key_id, is_down=False):
-    old_val = st.session_state.dashboard_memory.get(key_id)
-    changed = (old_val is not None) and (str(old_val) != str(value))
-    st.session_state.dashboard_memory[key_id] = str(value)
-    
-    anim_css = ""
-    style_block = ""
-    if changed:
-        run_id = int(time.time() * 1000)
-        anim_css = f"animation: slotRoll_{run_id} 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;"
-        # 这里的 CSS 也全部顶格写！
-        style_block = f"""
-<style>
-@keyframes slotRoll_{run_id} {{
-0% {{ transform: translateY(-30px); opacity: 0; color: #00eaff; }}
-80% {{ transform: translateY(2px); }}
-100% {{ transform: translateY(0); opacity: 1; color: #ffffff; }}
-}}
-</style>
-"""
-        
-    delta_class = "c-delta down" if is_down else "c-delta"
-    
-    # 【核心修复】：所有的 HTML 标签全部顶格，坚决不留哪怕一个空格缩进！
-    html = f"""{style_block}
-<div class="custom-card top-card">
-<div class="c-label">{label}</div>
-<div class="value-box">
-<div class="c-value" style="{anim_css}">{value}</div>
-</div>
-<div class="{delta_class}">{delta}</div>
-</div>
-"""
-    st.markdown(html, unsafe_allow_html=True)
-
-def render_lot_card(row, key_id):
-    name = row.get('name', '未知停车场')
-    loc = row.get('location', '未知位置')
-    price = row.get('price_per_hour', 0)
-    total = int(row.get('total_spaces', 0))
-    avail = int(row.get('available_spaces', 0))
-    
-    value_str = f"{avail} / {total}"
-    
-    old_val = st.session_state.dashboard_memory.get(key_id)
-    changed = (old_val is not None) and (str(old_val) != str(value_str))
-    st.session_state.dashboard_memory[key_id] = str(value_str)
-    
-    anim_css = ""
-    style_block = ""
-    if changed:
-        run_id = int(time.time() * 1000)
-        anim_css = f"animation: slotRoll_{run_id} 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;"
-        style_block = f"""
-<style>
-@keyframes slotRoll_{run_id} {{
-0% {{ transform: translateY(-30px); opacity: 0; color: #00eaff; }}
-80% {{ transform: translateY(2px); }}
-100% {{ transform: translateY(0); opacity: 1; color: #ffffff; }}
-}}
-</style>
-"""
-
-    ratio = 0 if total == 0 else avail / total
-    ratio_pct = int((1 - ratio) * 100) 
-    bar_color = "#ff4683" if ratio_pct >= 90 else "#00eaff"
-
-    # 【核心修复】：所有的 HTML 标签全部顶格，坚决不留哪怕一个空格缩进！
-    html = f"""{style_block}
-<div class="custom-card lot-card">
-<div class="lot-title">{name}</div>
-<div class="lot-loc">📍 {loc} | ¥{price}/h</div>
-<div class="progress-bg">
-<div class="progress-bar" style="width:{ratio_pct}%; background:{bar_color};"></div>
-</div>
-<div class="c-label">实时余位</div>
-<div class="value-box lot-value-box">
-<div class="c-value lot-val" style="{anim_css}">{value_str}</div>
-</div>
-<div class="c-delta {'down' if ratio_pct>=90 else ''}">占用: {ratio_pct}%</div>
-</div>
-"""
-    st.markdown(html, unsafe_allow_html=True)
-
-# ==================== 3. 导航与接口 ====================
-with st.sidebar:
-    st.image("https://img.icons8.com/nolan/96/smart-car.png", width=80)
-    st.markdown("## 🌌 智慧停车中枢")
-    st.markdown("---")
-    menu = st.radio("系统导航", ["📊 实时监控大盘", "🚘 车辆放行与记录", "📈 AI预测与财务分析"])
-    st.markdown("---")
-    st.caption("🟢 系统状态: 运行中")
-
-@st.cache_data(ttl=1)  
-def fetch_data(endpoint):
+# 工具函数：获取数据库会话
+def get_db():
+    db = SessionLocal()
     try:
-        return requests.get(f"http://127.0.0.1:8000/{endpoint}").json()
-    except:
-        return None
+        return db
+    finally:
+        db.close()
 
-# ==================== 页面 1: 实时监控大盘 ====================
-if menu == "📊 实时监控大盘":
-    st.title("📊 城市级实时监控大盘")
+
+# ================= 页面 1：AI 模型分析 =================
+if menu == "🧠 AI 模型深度分析":
+    st.title("🧠 AI 预测模型状态大盘")
+    st.markdown("这里是数据科学家和算法工程师的专属监控台，用于评估**随机森林多特征时序预测模型**的健康度。")
+
+    col1, col2 = st.columns([1, 1])
     
-    stats = fetch_data("statistics")
-    if stats:
-        c1, c2, c3, c4 = st.columns(4)
-        with c1: render_animated_metric("🅿️ 累计服务车次", f"{stats.get('records', 0)}", "⬆️ +12 辆 (较昨日)", "top_records")
-        with c2: render_animated_metric("💰 实时累计流水", f"¥ {stats.get('total_revenue', 0):.2f}", "⬆️ +5.4% 营收", "top_rev")
-        with c3: render_animated_metric("⏱️ 平均驻留时长", f"{stats.get('avg_parking_time', 0):.1f}", "⬇️ -0.2 小时", "top_time", is_down=True)
-        with c4: render_animated_metric("🚨 违停警告", "3", "🛡️ 保安已就位", "top_warn", is_down=True)
+    # 模块 1：加载并展示模型信息
+    with col1:
+        st.subheader("📦 模型文件加载状态")
+        model_path = "ai_prediction/model.pkl"
         
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        # 中部：停车场阵列
-        st.subheader("🏙️ 城市路网停车场实时阵列")
-        lots_data = fetch_data("lots")
-        
-        if lots_data is not None:
-            if len(lots_data) > 0:
-                lots_df = pd.DataFrame(lots_data)
-                lot_cols = st.columns(len(lots_df))
-                for idx, row in lots_df.iterrows():
-                    with lot_cols[idx]:
-                        render_lot_card(row, f"lot_{row.get('id', idx)}")
-            else:
-                st.info("ℹ️ 数据库中暂无停车场数据。")
+        if os.path.exists(model_path):
+            model = joblib.load(model_path)
+            st.success(f"✅ 成功加载本地模型: `{model_path}`")
+            st.info(f"**核心算法**: {type(model).__name__}")
+            
+            # 展示随机森林参数
+            if hasattr(model, 'n_estimators'):
+                st.write(f"- 决策树数量 (n_estimators): **{model.n_estimators}**")
+            
+            # 绘制特征重要性柱状图
+            if hasattr(model, 'feature_importances_'):
+                st.subheader("📊 模型特征重要性 (Feature Importance)")
+                # 对应我们在 train_model.py 里的四个特征
+                features = ["时间 (Hour)", "星期 (Day of Week)", "是否周末 (Weekend)", "天气 (Weather)"]
+                importances = model.feature_importances_
+                
+                if len(importances) == len(features):
+                    feat_df = pd.DataFrame({"特征": features, "重要度权重": importances})
+                    feat_df = feat_df.sort_values(by="重要度权重", ascending=False)
+                    # 使用 Streamlit 原生图表
+                    st.bar_chart(feat_df.set_index("特征"))
+                else:
+                    st.write(f"检测到特征数量 ({len(importances)}) 与预设 ({len(features)}) 不符，请确认是否更新了训练脚本。")
         else:
-            st.error("❌ 无法连接到后端获取停车场数据。")
+            st.error("❌ 未找到模型文件，请先在终端运行 `python -m ai_prediction.train_model`")
 
-        st.markdown("<br>", unsafe_allow_html=True)
+    # 模块 2：数据库原始训练数据查阅
+    with col2:
+        st.subheader("📈 训练集数据提取情况")
+        db = get_db()
+        # 提取最新 50 条停车记录
+        records = db.query(ParkingRecord).order_by(ParkingRecord.id.desc()).limit(50).all()
         
-        col1, col2 = st.columns((2, 1))
-        with col1:
-            st.subheader("🌐 AI 24小时流量预测曲线")
-            pred = fetch_data("predict")
-            if pred and len(pred) > 0:
-                df_pred = pd.DataFrame(pred)
-                fig = px.area(df_pred, x="hour", y="predicted_cars", color_discrete_sequence=['#00eaff'])
-                fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font_color="white", margin=dict(l=0, r=0, t=30, b=0))
-                fig.update_xaxes(showgrid=True, gridcolor='rgba(255,255,255,0.05)')
-                fig.update_yaxes(showgrid=True, gridcolor='rgba(255,255,255,0.05)')
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.warning("暂无预测数据")
-        with col2:
-            st.subheader("📷 关键通道实时快照")
-            st.image("https://images.unsplash.com/photo-1506521781263-d8422e82f27a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", caption="主入口 A 区", use_container_width=True)
-            st.image("https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", caption="地下 B 区", use_container_width=True)
+        if records:
+            df = pd.DataFrame([{
+                "记录ID": r.id, 
+                "入场时间": r.enter_time, 
+                "离开时间": r.leave_time,
+                "产生费用": r.fee,
+                # 兼容防错设计，防止旧数据库没有这些字段
+                "是否周末": getattr(r, 'is_weekend', "未知"),
+                "天气状态": getattr(r, 'weather_type', "未知")
+            } for r in records])
+            
+            st.dataframe(df, use_container_width=True)
+            st.caption("提示: 仅展示最新 50 条原始特征数据。真实训练集将包含全库数据。")
+        else:
+            st.warning("⚠️ 数据库中暂无停车记录，AI 目前处于缺乏训练数据的状态。")
+
+
+# ================= 页面 2：系统账号权限管理 =================
+elif menu == "🔐 系统账号权限管理":
+    st.title("🔐 全局 RBAC 权限与人员管理")
+    st.markdown("最高权限专区：在此分配系统账号，并控制其访问不同业务终端的权限。")
+    
+    db = get_db()
+    
+    # 模块 A: 创建新账号表单
+    with st.expander("➕ 点击展开：添加系统新员工账号", expanded=True):
+        with st.form("add_user_form", clear_on_submit=True):
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                new_user = st.text_input("登录用户名 (Username)")
+            with col2:
+                new_pwd = st.text_input("登录密码 (Password)", type="password")
+            with col3:
+                # 角色字典映射
+                role_map = {
+                    "screen": "💻 数据大屏专员 (仅监控大屏)", 
+                    "admin": "⚙️ 业务管理员 (后台管理系统)", 
+                    "dev": "👨‍💻 高级开发者 (查看算法看板)"
+                }
+                new_role = st.selectbox("分配系统操作角色", list(role_map.keys()), format_func=lambda x: role_map[x])
+                
+            submitted = st.form_submit_button("✅ 创建并授权账号")
+            
+            if submitted:
+                if new_user and new_pwd:
+                    # 检查用户名是否已经被注册
+                    exist = db.query(SystemUser).filter(SystemUser.username == new_user).first()
+                    if exist:
+                        st.error(f"❌ 注册失败：用户名 '{new_user}' 已存在，请更换！")
+                    else:
+                        u = SystemUser(username=new_user, password=new_pwd, role=new_role)
+                        db.add(u)
+                        db.commit()
+                        st.success(f"🎉 成功创建系统账号: **{new_user}**，已赋予 **{role_map[new_role]}** 权限！请刷新页面查看下方列表。")
+                else:
+                    st.warning("⚠️ 请完整填写用户名和密码！")
+
+    st.markdown("---")
+    
+    # 模块 B: 账号列表一览
+    st.subheader("📋 当前系统已注册员工名单")
+    users = db.query(SystemUser).all()
+    
+    if users:
+        user_data = []
+        for u in users:
+            # 翻译角色显示
+            role_display = {
+                "screen": "🌟 数据大屏专员", 
+                "admin": "🛡️ 业务管理员", 
+                "dev": "👑 高级开发者"
+            }.get(u.role, "未知角色")
+            
+            user_data.append({
+                "内部识别码 (ID)": u.id, 
+                "员工登录名": u.username, 
+                "系统分配权限": role_display,
+                "权限底层代码": u.role
+            })
+            
+        df_users = pd.DataFrame(user_data)
+        # 隐藏索引，显示更加美观
+        st.dataframe(df_users, hide_index=True, use_container_width=True)
     else:
-        st.warning("⏳ 正在等待核心系统数据同步中...")
-
-# ==================== 页面 2 & 3 保持不变 ====================
-elif menu == "🚘 车辆放行与记录":
-    st.title("🚘 车辆通行管理中心")
-    with st.expander("🛠️ 异常车辆远程处理台 (点击展开)", expanded=True):
-        cc1, cc2, cc3 = st.columns(3)
-        plate_input = cc1.text_input("输入车牌号", placeholder="例如：粤B·88888")
-        gate_select = cc2.selectbox("选择道闸", ["东门入口", "南门出口", "地下VIP入口"])
-        if cc3.button("🟢 确认身份并强制抬杆", use_container_width=True):
-            if plate_input:
-                with st.spinner('指令下发中...'): time.sleep(1)
-                st.toast(f"✅ {gate_select} 抬杆成功！放行车辆: {plate_input}", icon="🚨")
-                st.cache_data.clear() 
-            else:
-                st.error("请输入车牌号")
-
-    st.markdown("### 📋 历史通行记录查询")
-    records = fetch_data("records")
-    if records:
-        df_records = pd.DataFrame(records)
-        if not df_records.empty:
-            df_records['enter_time'] = pd.to_datetime(df_records['enter_time']).dt.strftime('%Y-%m-%d %H:%M:%S')
-            df_records['leave_time'] = pd.to_datetime(df_records['leave_time']).dt.strftime('%Y-%m-%d %H:%M:%S')
-            search = st.text_input("🔍 模糊搜索记录", "")
-            if search:
-                df_records = df_records[df_records.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
-            st.dataframe(df_records, use_container_width=True, height=400)
-
-elif menu == "📈 AI预测与财务分析":
-    st.title("📈 财务报表与模型洞察")
-    tab1, tab2 = st.tabs(["💰 财务报表分析", "🧠 AI 模型状态"])
-    with tab1:
-        st.subheader("收益趋势分析")
-        dates = pd.date_range(end=pd.Timestamp.today(), periods=7)
-        revenues = [1200, 1500, 1100, 1800, 2200, 3100, 2800]
-        df_rev = pd.DataFrame({"日期": dates, "收益(元)": revenues})
-        fig_rev = px.bar(df_rev, x="日期", y="收益(元)", text="收益(元)", color="收益(元)", color_continuous_scale="blues")
-        fig_rev.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font_color="white")
-        st.plotly_chart(fig_rev, use_container_width=True)
-    with tab2:
-        st.subheader("Veo 停车需求预测模型状态")
-        c_m1, c_m2, c_m3 = st.columns(3)
-        with c_m1: render_animated_metric("模型版本", "v2.4.1", "XGBoost 引擎", "ai_ver")
-        with c_m2: render_animated_metric("最新 R² 得分", "0.92", "拟合度极佳", "ai_score")
-        with c_m3: render_animated_metric("下次重训时间", "03:00", "今晚自动执行", "ai_time")
+        st.info("ℹ️ 目前数据库中没有任何账号记录。系统允许临时使用后门超级账号 (root) 进行登录操作。")

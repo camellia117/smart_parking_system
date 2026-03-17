@@ -2,151 +2,150 @@
 <html lang="zh-CN">
 <head>
     <meta charset="utf-8">
-    <title>智慧停车大屏监控系统</title>
+    <title>AI 智慧停车云控平台</title>
     <script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
     <style>
-        /* 基础样式与背景 */
-        body { margin: 0; background: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') center/cover; color: #fff; font-family: 'Microsoft YaHei', sans-serif; overflow: hidden; }
-        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(3, 10, 20, 0.85); z-index: -1; }
+        body { margin: 0; background: #000510; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
         
-        /* 顶部栏 */
-        .header { height: 80px; display: flex; justify-content: space-between; align-items: center; padding: 0 40px; background: linear-gradient(180deg, rgba(0, 234, 255, 0.15) 0%, transparent 100%); border-bottom: 1px solid rgba(0,234,255,0.3); }
-        .header h1 { color: #00eaff; text-shadow: 0 0 20px #00eaff; margin: 0; letter-spacing: 2px;}
-        
-        /* 交互按钮 */
-        .btn-action { background: rgba(0, 234, 255, 0.2); border: 1px solid #00eaff; color: #00eaff; padding: 10px 20px; font-size: 16px; border-radius: 4px; cursor: pointer; transition: all 0.3s; box-shadow: 0 0 10px rgba(0,234,255,0.2) inset; }
-        .btn-action:hover { background: #00eaff; color: #000; box-shadow: 0 0 20px #00eaff; }
+        /* 粒子背景层 */
+        #particles-js {
+            position: absolute; width: 100%; height: 100%;
+            background-image: radial-gradient(circle, #001d4d 0%, #000510 100%);
+            z-index: 1;
+        }
 
-        /* 布局网格 */
-        .container { display: flex; padding: 20px; gap: 20px; height: calc(100vh - 120px); }
-        .col { display: flex; flex-direction: column; gap: 20px; }
-        .col-left { flex: 3; } .col-center { flex: 5; } .col-right { flex: 3; }
+        /* 玻璃拟态容器 */
+        .main-content { position: relative; z-index: 2; height: 100vh; display: flex; flex-direction: column; }
         
-        /* 面板卡片 */
-        .panel { background: rgba(10, 25, 50, 0.5); border: 1px solid rgba(0, 234, 255, 0.2); backdrop-filter: blur(10px); padding: 20px; border-radius: 8px; flex: 1; display: flex; flex-direction: column; position: relative; transition: transform 0.3s;}
-        .panel:hover { transform: scale(1.02); border-color: rgba(0, 234, 255, 0.6); }
-        .panel-title { font-size: 18px; color: #fff; margin-bottom: 15px; border-left: 4px solid #00eaff; padding-left: 10px; }
+        .header {
+            height: 70px; background: rgba(0, 234, 255, 0.05);
+            backdrop-filter: blur(10px); border-bottom: 2px solid #00eaff33;
+            display: flex; justify-content: space-between; align-items: center; padding: 0 50px;
+        }
+
+        .header h1 { 
+            background: linear-gradient(to right, #00eaff, #008cff);
+            -webkit-background-clip: text; color: transparent;
+            font-size: 28px; letter-spacing: 5px; text-transform: uppercase;
+        }
+
+        .container { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 20px; padding: 20px; flex: 1; }
+        
+        .panel {
+            background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(0, 234, 255, 0.1);
+            border-radius: 15px; padding: 15px; display: flex; flex-direction: column;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+        }
+
+        .panel-title { color: #00eaff; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; }
+        .panel-title::before { content: ""; width: 4px; height: 16px; background: #00eaff; margin-right: 8px; }
+
         .chart { flex: 1; width: 100%; }
 
-        /* 数字指标 */
-        .metrics { display: flex; justify-content: space-around; text-align: center; }
-        .metric-val { font-size: 32px; color: #ffeb7b; font-weight: bold; font-family: Impact; margin-top: 10px; text-shadow: 0 0 10px rgba(255, 235, 123, 0.5);}
-        .metric-label { color: #8cb6f5; font-size: 14px; }
-
-        /* 模态弹窗 (隐藏状态) */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; }
-        .modal-content { background: #0b1528; border: 1px solid #00eaff; padding: 30px; width: 500px; border-radius: 10px; box-shadow: 0 0 30px rgba(0,234,255,0.3); text-align: center; position: relative;}
-        .close-btn { position: absolute; top: 10px; right: 15px; color: #00eaff; font-size: 24px; cursor: pointer; }
-        .modal-btn { background: #ff4683; border: none; color: white; padding: 12px 24px; font-size: 18px; margin-top: 20px; cursor: pointer; border-radius: 5px; box-shadow: 0 0 15px rgba(255, 70, 131, 0.5);}
-        .modal-btn:hover { background: #ff2065; }
+        /* 数字跳动效果 */
+        .big-num { font-family: 'Orbitron', sans-serif; font-size: 42px; color: #00eaff; text-shadow: 0 0 15px #00eaff; }
     </style>
 </head>
 <body>
-    <div class="overlay"></div>
+    <div id="particles-js"></div>
 
-    <div class="header">
-        <h1>🌌 城市级智慧停车AI平台</h1>
-        <button class="btn-action" onclick="openModal()">🚨 紧急控制台</button>
-    </div>
+    <div class="main-content">
+        <div class="header">
+            <h1>SMART PARKING AI-OS</h1>
+            <div id="time" style="color: #8cb6f5; font-family: monospace;"></div>
+        </div>
 
-    <div class="container">
-        <div class="col col-left">
-            <div class="panel">
-                <div class="panel-title">今日核心指标</div>
-                <div class="metrics" style="flex-direction: column; gap: 20px; align-items: center; justify-content: center; height: 100%;">
-                    <div><div class="metric-label">入场总车辆 (辆)</div><div class="metric-val" id="val-records">--</div></div>
-                    <div><div class="metric-label">今日流水 (元)</div><div class="metric-val" id="val-revenue" style="color: #00eaff;">--</div></div>
+        <div class="container">
+            <div class="col">
+                <div class="panel">
+                    <div class="panel-title">实时入场率</div>
+                    <div id="gaugeChart" class="chart"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-title">AI 识别流</div>
+                    <div style="background: #000; height: 150px; border-radius: 10px; position: relative; overflow: hidden;">
+                        <div style="width:100%; height:2px; background:#00eaff; position:absolute; animation: scan 2s infinite;"></div>
+                        <p style="font-size: 10px; color: #0f0; padding: 10px; font-family: monospace;">
+                            [AI SCANNING...]<br>
+                            PLATE: 粤B·88888 (98.2%)<br>
+                            STATUS: ENTEREDING...
+                        </p>
+                    </div>
                 </div>
             </div>
-            <div class="panel">
-                <div class="panel-title">车位实时状态</div>
-                <div id="pieChart" class="chart"></div>
-            </div>
-        </div>
 
-        <div class="col col-center">
-            <div class="panel" style="flex: 2;">
-                <div class="panel-title">AI 未来24小时车流预测</div>
+            <div class="panel">
+                <div class="panel-title">AI 流量神经网络预测 (未来24h)</div>
                 <div id="mainChart" class="chart"></div>
             </div>
-        </div>
 
-        <div class="col col-right">
-            <div class="panel">
-                <div class="panel-title">近7日营收分析</div>
-                <div id="barChart" class="chart"></div>
+            <div class="col">
+                <div class="panel">
+                    <div class="panel-title">今日总营收</div>
+                    <div class="big-num" id="val-revenue">¥0.00</div>
+                </div>
+                <div id="pieChart" class="panel chart"></div>
             </div>
-        </div>
-    </div>
-
-    <div id="controlModal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeModal()">&times;</span>
-            <h2 style="color: #00eaff; border-bottom: 1px solid #333; padding-bottom: 10px;">🚨 应急设备控制台</h2>
-            <p style="color: #aaa; text-align: left; line-height: 1.8;">
-                ⚠️ 警告：当前进入人工强制模式。<br>
-                系统检测到 <b>南门出口</b> 存在车辆拥堵，AI识别探头离线。<br>
-                是否执行全局强行抬杆放行指令？
-            </p>
-            <button class="modal-btn" onclick="triggerAction()">立即执行一键抬杆</button>
         </div>
     </div>
 
     <script>
-        // 弹窗控制逻辑
-        function openModal() { document.getElementById('controlModal').style.display = 'flex'; }
-        function closeModal() { document.getElementById('controlModal').style.display = 'none'; }
-        function triggerAction() {
-            alert("✅ 指令已下发！全场道闸已开启。");
-            closeModal();
-        }
+        // 初始化粒子背景
+        particlesJS('particles-js', {
+            particles: {
+                number: { value: 80 },
+                color: { value: '#00eaff' },
+                shape: { type: 'circle' },
+                opacity: { value: 0.5 },
+                size: { value: 3 },
+                line_linked: { enable: true, distance: 150, color: '#00eaff', opacity: 0.2, width: 1 },
+                move: { enable: true, speed: 2 }
+            }
+        });
 
-        window.onload = async function() {
-            const mainChart = echarts.init(document.getElementById('mainChart'));
-            const pieChart = echarts.init(document.getElementById('pieChart'));
-            const barChart = echarts.init(document.getElementById('barChart'));
+        // 模拟扫描线动画
+        const style = document.createElement('style');
+        style.innerHTML = `@keyframes scan { 0% {top: 0;} 100% {top: 100%;} }`;
+        document.head.appendChild(style);
 
-            // 1. 获取统计数据
+        // 初始化图表
+        const mainChart = echarts.init(document.getElementById('mainChart'));
+        
+        async function updateData() {
             try {
-                let statRes = await fetch("http://127.0.0.1:8000/statistics");
-                let statData = await statRes.json();
-                // 动态数字增长动画模拟
-                let currentRec = 0; let targetRec = statData.records || 0;
-                setInterval(() => { if(currentRec < targetRec) { currentRec++; document.getElementById('val-records').innerText = currentRec; } }, 20);
-                document.getElementById('val-revenue').innerText = "¥" + (statData.total_revenue || 0).toFixed(2);
-            } catch(e) { console.log("等待后端..."); }
-
-            // 2. 获取预测数据并画图
-            try {
-                let res = await fetch("http://127.0.0.1:8000/predict");
-                let data = await res.json();
+                // 调用你的 FastAPI 接口
+                const res = await fetch("http://127.0.0.1:8000/predict");
+                const data = await res.json();
+                
                 mainChart.setOption({
-                    tooltip: { trigger: 'axis', backgroundColor: 'rgba(0,0,0,0.7)', textStyle: {color: '#fff'} },
-                    xAxis: { type: 'category', data: data.map(i=>i.hour), axisLabel: {color: '#8cb6f5'} },
-                    yAxis: { type: 'value', splitLine: { lineStyle: {color: 'rgba(255,255,255,0.1)'} }, axisLabel: {color: '#8cb6f5'} },
+                    tooltip: { trigger: 'axis' },
+                    xAxis: { type: 'category', data: data.map(i=>i.hour + ":00"), axisLabel: {color: '#8cb6f5'} },
+                    yAxis: { type: 'value', splitLine: {lineStyle: {color: '#112233'}} },
                     series: [{
-                        data: data.map(i=>i.predicted_cars), type: 'line', smooth: true,
-                        itemStyle: { color: '#00eaff' },
+                        name: '预测车辆',
+                        data: data.map(i=>i.predicted_cars),
+                        type: 'line', smooth: true,
+                        symbol: 'none',
+                        lineStyle: { width: 4, color: '#00eaff' },
                         areaStyle: {
-                            color: new echarts.graphic.LinearGradient(0,0,0,1, [{offset: 0, color: 'rgba(0, 234, 255, 0.8)'}, {offset: 1, color: 'transparent'}])
+                            color: new echarts.graphic.LinearGradient(0,0,0,1, [
+                                {offset: 0, color: 'rgba(0, 234, 255, 0.3)'},
+                                {offset: 1, color: 'transparent'}
+                            ])
                         }
                     }]
                 });
-            } catch(e) {}
-
-            // 3. 静态图表渲染
-            pieChart.setOption({
-                tooltip: { trigger: 'item' }, color: ['#00eaff', '#ffeb7b', '#ff4683'],
-                series: [{ type: 'pie', radius: ['50%', '80%'], data: [{value: 820, name: '使用中'}, {value: 180, name: '空闲'}, {value: 5, name: '异常'}] }]
-            });
-            barChart.setOption({
-                xAxis: { type: 'category', data: ['一','二','三','四','五','六','日'], axisLabel: {color: '#8cb6f5'} },
-                yAxis: { type: 'value', splitLine: { show: false }, axisLabel: {color: '#8cb6f5'} },
-                series: [{ type: 'bar', data: [120, 200, 150, 80, 70, 110, 130], itemStyle: { color: '#00eaff', borderRadius: [5,5,0,0] } }]
-            });
-
-            window.addEventListener('resize', () => { mainChart.resize(); pieChart.resize(); barChart.resize(); });
+            } catch(e) { console.log("Backend not ready..."); }
         }
+
+        setInterval(updateData, 5000);
+        updateData();
+        
+        // 更新时间
+        setInterval(() => {
+            document.getElementById('time').innerText = new Date().toLocaleString();
+        }, 1000);
     </script>
 </body>
 </html>

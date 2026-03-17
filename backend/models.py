@@ -25,13 +25,25 @@ class ParkingLot(Base):
     available_spaces = Column(Integer)  
 
 
+# 修改 backend/models.py 增加特征字段
 class ParkingRecord(Base):
-
     __tablename__ = "parking_records"
-
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer)
     lot_id = Column(Integer)
     enter_time = Column(DateTime)
+    # 新增：是否为周末 (0或1)
+    is_weekend = Column(Integer, default=0) 
+    # 新增：天气状况 (0:晴, 1:雨/雪)
+    weather_type = Column(Integer, default=0) 
     leave_time = Column(DateTime, nullable=True) 
     fee = Column(Float)
+    
+    # 修改 backend/models.py，在最下面追加
+class SystemUser(Base):
+    __tablename__ = "system_users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    password = Column(String)  # 毕设演示为了直观可暂用明文，答辩时可提一嘴工业界会用MD5/哈希
+    role = Column(String)      # 角色字段：'screen', 'admin', 'dev'
