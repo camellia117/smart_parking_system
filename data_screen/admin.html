@@ -17,11 +17,11 @@
         }
         
         // 【可选】精细化权限控制：比如这里是 screen.html，可以限制只有 screen 或最高权限的 dev 才能看
-        // 如果你在改 admin.html，就把下面的 'screen' 换成 'admin'
-        if (role !== 'screen' && role !== 'dev') {
+        if (role !== 'admin' && role !== 'dev'&& role !== 'screen') {
             alert("⛔ 权限不足：您的账号无权访问此页面！");
             window.location.href = "login.html"; 
         }
+        
     </script>
     <style>
         /* 全局与科技感背景 */
@@ -84,6 +84,18 @@
             <div class="nav-item" onclick="openBigScreen()">
                 <i class="fa-solid fa-display"></i> AI 预测大屏 <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 12px; margin-left: auto;"></i>
             </div>
+            <div class="nav-item" onclick="switchPage('page-dashboard-v8', this)">
+                <i class="fa-solid fa-gauge-high"></i> 智慧停车管控中枢
+            </div>
+            <div class="nav-item" onclick="switchPage('page-st-1', this)">
+                <i class="fa-solid fa-chart-line"></i> 实时监控大盘
+            </div>
+            <div class="nav-item" onclick="switchPage('page-st-2', this)">
+                <i class="fa-solid fa-car-burst"></i> 车辆放行与记录
+            </div>
+            <div class="nav-item" onclick="switchPage('page-st-3', this)">
+                <i class="fa-solid fa-robot"></i> AI预测与财务分析
+            </div>
         </div>
 
         <div class="main-content">
@@ -104,6 +116,17 @@
                         <i class="fa-solid fa-rotate-right"></i> 刷新数据
                     </button>
                 </div>
+                <div id="page-st-1" class="page">
+                    <iframe src="http://localhost:8502/?menu=1" width="100%" height="850px" frameborder="0" style="border-radius: 10px; background: transparent;"></iframe>
+                </div>
+                
+                <div id="page-st-2" class="page">
+                    <iframe src="http://localhost:8502/?menu=2" width="100%" height="850px" frameborder="0" style="border-radius: 10px; background: transparent;"></iframe>
+                </div>
+                
+                <div id="page-st-3" class="page">
+                    <iframe src="http://localhost:8502/?menu=3" width="100%" height="850px" frameborder="0" style="border-radius: 10px; background: transparent;"></iframe>
+                </div>
                 <table class="data-table">
                     <thead>
                         <tr>
@@ -119,6 +142,12 @@
                         <tr><td colspan="6" style="text-align: center; color: #aaa;">正在同步后端数据...</td></tr>
                     </tbody>
                 </table>
+            </div>
+            <div id="page-dashboard-v8" class="page">
+                <div class="page-header">
+                    <h2><i class="fa-solid fa-gauge-high"></i> 智慧停车管控中枢 V8</h2>
+                </div>
+                <iframe src="http://localhost:8502" width="100%" height="800px" frameborder="0" style="border-radius: 10px; background: transparent; box-shadow: 0 0 20px rgba(0,0,0,0.3);"></iframe>
             </div>
 
         </div>

@@ -148,13 +148,29 @@ def render_lot_card(row, key_id):
     st.markdown(html, unsafe_allow_html=True)
 
 # ==================== 3. 导航与接口 ====================
-with st.sidebar:
-    st.image("https://img.icons8.com/nolan/96/smart-car.png", width=80)
-    st.markdown("## 🌌 智慧停车中枢")
-    st.markdown("---")
-    menu = st.radio("系统导航", ["📊 实时监控大盘", "🚘 车辆放行与记录", "📈 AI预测与财务分析"])
-    st.markdown("---")
-    st.caption("🟢 系统状态: 运行中")
+
+# 1. 注入 CSS 彻底隐藏 Streamlit 原生的侧边栏和左上角的展开按钮
+st.markdown("""
+<style>
+[data-testid="collapsedControl"] {display: none !important;} 
+section[data-testid="stSidebar"] {display: none !important;}
+/* 减少顶部留白，让嵌入 HTML 时更自然 */
+.block-container {padding-top: 1rem !important;} 
+</style>
+""", unsafe_allow_html=True)
+
+# 2. 改用 URL Query 参数来控制当前页面
+# 例如：访问 http://localhost:8502/?menu=1 就会显示大盘
+menu_param = st.query_params.get("menu", "1")
+
+if menu_param == "1":
+    menu = "📊 实时监控大盘"
+elif menu_param == "2":
+    menu = "🚘 车辆放行与记录"
+elif menu_param == "3":
+    menu = "📈 AI预测与财务分析"
+else:
+    menu = "📊 实时监控大盘"
 
 @st.cache_data(ttl=1)  
 def fetch_data(endpoint):
