@@ -38,7 +38,17 @@ streamlit run dashboard/dashboard.py
 
 python mock_data/realtime_simulator.py
 
-第四步：查看 HTML 智慧大屏 (screen.html)
+
+第四步：
+python -m http.server 5500
+这行命令的意思是：把当前目录作为一个网站跑起来，端口是 5500。
+
+
+登陆页面：
+http://127.0.0.1:5500/data_screen/login.html
+
+
+第五步：查看 HTML 智慧大屏 (screen.html)
 这个是纯前端的 HTML 文件，查看方式非常简单：
 方法 A（直接打开）：
 在 Cursor 左侧的文件树中，找到 data_screen/screen.html 文件。在你的电脑文件夹里直接双击它，或者把它拖拽到 Chrome/Edge 浏览器中即可打开。

@@ -13,6 +13,28 @@ from backend.models import SystemUser, ParkingRecord
 # 配置 Streamlit 页面的标题和宽屏布局
 st.set_page_config(page_title="AI-Parking 开发者大本营", page_icon="👨‍💻", layout="wide")
 
+# ================= 【新增】页面鉴权拦截 (防越权访问) =================
+# 1. 初始化会话状态中的登录标记
+if "is_authenticated" not in st.session_state:
+    st.session_state.is_authenticated = False
+
+# 2. 检查 URL 参数中是否带有统一登录页传来的授权 Token
+if "auth_token" in st.query_params:
+    if st.query_params["auth_token"] == "dev_granted":
+        st.session_state.is_authenticated = True
+        # 验证通过后，立刻清除 URL 里的参数，防止用户复制带有 token 的网址发给别人
+        st.query_params.clear()
+
+# 3. 如果验证未通过，展示拦截信息并停止渲染后续页面
+if not st.session_state.is_authenticated:
+    st.error("⛔ **权限拒绝：您尚未登录或身份已过期！**")
+    st.warning("系统检测到您正试图直接越权访问开发者控制台。出于数据安全考虑，请先前往「统一身份认证中心」验证身份。")
+    # 注意：这里的链接请改成你平时在浏览器里打开 login.html 的实际地址（比如 VSCode Live Server 的 5500 端口）
+    st.markdown("👉 [点击这里返回登录页面](http://127.0.0.1:5500/data_screen/login.html)") 
+    st.stop()  # 关键点：st.stop() 会立刻停止执行后面的 Python 代码，保护数据安全
+
+
+
 # ================= 侧边栏导航 =================
 st.sidebar.title("👨‍💻 开发者核心中枢")
 st.sidebar.markdown("---")

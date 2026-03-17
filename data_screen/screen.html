@@ -5,6 +5,24 @@
     <title>AI 智慧停车云控平台</title>
     <script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script>
+        // 从 LocalStorage 读取登录状态和角色
+        const isAuth = localStorage.getItem("system_auth");
+        const role = localStorage.getItem("system_role");
+        
+        // 如果没有登录记录，直接踢回登录页
+        if (isAuth !== "true") {
+            alert("⛔ 非法访问！请先通过统一身份认证中心登录。");
+            window.location.href = "login.html"; 
+        }
+        
+        // 【可选】精细化权限控制：比如这里是 screen.html，可以限制只有 screen 或最高权限的 dev 才能看
+        // 如果你在改 admin.html，就把下面的 'screen' 换成 'admin'
+        if (role !== 'screen' && role !== 'dev') {
+            alert("⛔ 权限不足：您的账号无权访问此页面！");
+            window.location.href = "login.html"; 
+        }
+    </script>
     <style>
         body { margin: 0; background: #000510; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
         

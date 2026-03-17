@@ -58,14 +58,20 @@
 
                 if (data.success) {
                     err.style.display = 'none';
+                    
+                    // 【新增代码】：登录成功后，将身份信息存入浏览器的 LocalStorage
+                    localStorage.setItem("system_auth", "true");
+                    localStorage.setItem("system_role", data.role);
+                    localStorage.setItem("system_username", u); 
+
                     // 核心权限路由逻辑
                     if (data.role === 'screen') {
                         window.location.href = 'screen.html';
                     } else if (data.role === 'admin') {
                         window.location.href = 'admin.html';
                     } else if (data.role === 'dev') {
-                        // 开发者直接跳转到 Streamlit 面板
-                        window.location.href = 'http://localhost:8501'; 
+                        // 【修改代码】：开发者跳转到 Streamlit 时，在 URL 中加上一个简单的授权 Token
+                        window.location.href = 'http://localhost:8501/?auth_token=dev_granted'; 
                     }
                 } else {
                     err.innerText = data.message;
@@ -75,7 +81,7 @@
                 err.innerText = "网络请求失败，请检查后端是否启动";
                 err.style.display = 'block';
             }
-        }
+}
     </script>
 </body>
 </html>
