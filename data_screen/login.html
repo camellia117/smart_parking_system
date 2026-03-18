@@ -2,86 +2,206 @@
 <html lang="zh-CN">
 <head>
     <meta charset="utf-8">
-    <title>智慧停车系统 - 统一身份认证</title>
+    <title>SMART PARKING AI-OS | 统一身份认证</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { margin: 0; padding: 0; background: #050b14; color: #fff; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        /* [样式代码与原版类似，省略部分以节省空间，你需要保留原有的 CSS，并添加以下针对新元素的样式] */
+        body { margin: 0; background: #000510; color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        .login-container { background: rgba(10, 25, 50, 0.8); border: 1px solid rgba(0, 234, 255, 0.3); border-radius: 15px; padding: 40px; width: 380px; box-shadow: 0 0 30px rgba(0, 234, 255, 0.2); backdrop-filter: blur(10px); position: relative; z-index: 2; transition: all 0.3s ease; }
+        .title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 30px; background: linear-gradient(to right, #00eaff, #008cff); -webkit-background-clip: text; color: transparent; letter-spacing: 2px; }
+        .input-group { margin-bottom: 20px; position: relative; }
+        .input-group i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #00eaff; }
+        .input-group input { width: 100%; padding: 12px 15px 12px 40px; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(0, 234, 255, 0.2); border-radius: 8px; color: #fff; font-size: 14px; box-sizing: border-box; outline: none; transition: 0.3s; }
+        .input-group input:focus { border-color: #00eaff; box-shadow: 0 0 10px rgba(0, 234, 255, 0.3); }
         
-        /* 动态背景星空/光晕 */
-        .bg-glow { position: absolute; width: 600px; height: 600px; background: radial-gradient(circle, rgba(0, 234, 255, 0.1) 0%, transparent 70%); top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 0; animation: pulse 4s infinite alternate; }
-        @keyframes pulse { 0% { transform: translate(-50%, -50%) scale(1); } 100% { transform: translate(-50%, -50%) scale(1.2); } }
+        /* 验证码组样式 */
+        .code-group { display: flex; gap: 10px; }
+        .code-group input { flex: 1; }
+        .btn-code { background: rgba(0, 234, 255, 0.1); border: 1px solid #00eaff; color: #00eaff; padding: 0 15px; border-radius: 8px; cursor: pointer; white-space: nowrap; transition: 0.3s; }
+        .btn-code:hover { background: rgba(0, 234, 255, 0.2); }
+        .btn-code:disabled { color: #555; border-color: #555; cursor: not-allowed; }
 
-        /* 登录框玻璃拟态 */
-        .login-box { position: relative; z-index: 1; background: rgba(10, 25, 50, 0.6); border: 1px solid rgba(0, 234, 255, 0.3); border-radius: 15px; padding: 40px; width: 350px; box-shadow: 0 0 30px rgba(0, 234, 255, 0.1); backdrop-filter: blur(10px); text-align: center; }
-        .login-box h2 { color: #00eaff; letter-spacing: 2px; margin-bottom: 30px; }
-        
-        .input-group { margin-bottom: 25px; text-align: left; }
-        .input-group label { display: block; color: #8cb6f5; font-size: 14px; margin-bottom: 8px; }
-        .input-group input { width: 90%; padding: 12px; background: rgba(0,0,0,0.5); border: 1px solid #333; color: #fff; border-radius: 5px; outline: none; transition: 0.3s; }
-        .input-group input:focus { border-color: #00eaff; box-shadow: 0 0 10px rgba(0,234,255,0.2); }
+        .btn-login { width: 100%; padding: 12px; background: linear-gradient(90deg, #008cff, #00eaff); border: none; border-radius: 8px; color: #000; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .btn-login:hover { box-shadow: 0 0 20px rgba(0, 234, 255, 0.5); transform: translateY(-2px); }
+        .error-msg { color: #ff4683; font-size: 13px; text-align: center; margin-top: 15px; min-height: 18px; }
+        .link-text { color: #8cb6f5; font-size: 13px; text-align: right; margin-top: 10px; cursor: pointer; transition: 0.3s; display: block; }
+        .link-text:hover { color: #00eaff; text-decoration: underline; }
 
-        .btn-login { width: 100%; padding: 12px; background: linear-gradient(90deg, #008cff, #00eaff); border: none; color: #000; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.3s; margin-top: 10px;}
-        .btn-login:hover { box-shadow: 0 0 20px rgba(0,234,255,0.5); transform: translateY(-2px); }
-
-        #error-msg { color: #ff4683; font-size: 14px; margin-top: 15px; display: none; }
+        /* 面板切换控制 */
+        .panel { display: none; }
+        .panel.active { display: block; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body>
-    <div class="bg-glow"></div>
-    <div class="login-box">
-        <h2>AI-PARKING OS</h2>
-        <div class="input-group">
-            <label>账号 (Username)</label>
-            <input type="text" id="username" placeholder="请输入系统分配账号">
+    <div class="login-container">
+        
+        <div id="login-panel" class="panel active">
+            <div class="title">SMART PARKING AI-OS</div>
+            <div class="input-group">
+                <i class="fa-solid fa-user"></i>
+                <input type="text" id="username" placeholder="请输入系统账号" autocomplete="off">
+            </div>
+            <div class="input-group">
+                <i class="fa-solid fa-lock"></i>
+                <input type="password" id="password" placeholder="请输入访问密钥">
+            </div>
+            <button class="btn-login" onclick="attemptLogin()"><i class="fa-solid fa-right-to-bracket"></i> 安全登入</button>
+            <span class="link-text" onclick="switchPanel('forgot-panel')">忘记密码？找回密钥</span>
+            <div class="error-msg" id="login-error"></div>
         </div>
-        <div class="input-group">
-            <label>密码 (Password)</label>
-            <input type="password" id="password" placeholder="••••••••">
+
+        <div id="forgot-panel" class="panel">
+            <div class="title" style="font-size: 20px;">找回访问密钥</div>
+            <div class="input-group">
+                <i class="fa-solid fa-phone"></i>
+                <input type="text" id="f-phone" placeholder="请输入绑定的手机号">
+            </div>
+            <div class="input-group code-group">
+                <i class="fa-solid fa-shield-halved"></i>
+                <input type="text" id="f-code" placeholder="短信验证码">
+                <button class="btn-code" id="btn-send-code" onclick="sendCode()">获取验证码</button>
+            </div>
+            <div class="input-group">
+                <i class="fa-solid fa-key"></i>
+                <input type="password" id="f-new-pass" placeholder="请输入新密码">
+            </div>
+            <button class="btn-login" onclick="resetPassword()"><i class="fa-solid fa-check"></i> 重置并返回登录</button>
+            <span class="link-text" onclick="switchPanel('login-panel')">返回登录页</span>
+            <div class="error-msg" id="forgot-error"></div>
         </div>
-        <button class="btn-login" onclick="doLogin()">登 录 进 入</button>
-        <div id="error-msg">账号或密码错误！</div>
+
     </div>
 
     <script>
-        async function doLogin() {
-            const u = document.getElementById('username').value;
-            const p = document.getElementById('password').value;
-            const err = document.getElementById('error-msg');
+        // 切换面板
+        function switchPanel(panelId) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(panelId).classList.add('active');
+            document.querySelectorAll('.error-msg').forEach(e => e.innerText = '');
+        }
+
+        // 发送验证码倒计时逻辑
+        let countdown = 60;
+        let timer = null;
+        async function sendCode() {
+            const phone = document.getElementById('f-phone').value;
+            const errorMsg = document.getElementById('forgot-error');
+            if (!phone) {
+                errorMsg.innerText = '⛔ 请先输入绑定的手机号';
+                return;
+            }
+
+            const btn = document.getElementById('btn-send-code');
+            btn.disabled = true;
+            
+            try {
+                const res = await fetch(`http://127.0.0.1:8000/send_code/?phone=${phone}`, { method: 'POST' });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    // 【测试专用】将验证码显示在页面上，实际项目中应去掉这行
+                    errorMsg.innerText = `✅ 验证码已发送 (模拟验证码: ${data.mock_code})`;
+                    errorMsg.style.color = '#00ff88';
+                    
+                    timer = setInterval(() => {
+                        countdown--;
+                        btn.innerText = `${countdown}s 后重发`;
+                        if (countdown <= 0) {
+                            clearInterval(timer);
+                            btn.disabled = false;
+                            btn.innerText = '获取验证码';
+                            countdown = 60;
+                        }
+                    }, 1000);
+                } else {
+                    errorMsg.innerText = '⛔ ' + data.detail;
+                    errorMsg.style.color = '#ff4683';
+                    btn.disabled = false;
+                }
+            } catch (e) {
+                errorMsg.innerText = '⛔ 网络请求失败';
+                errorMsg.style.color = '#ff4683';
+                btn.disabled = false;
+            }
+        }
+
+        // 重置密码逻辑
+        async function resetPassword() {
+            const phone = document.getElementById('f-phone').value;
+            const code = document.getElementById('f-code').value;
+            const newPass = document.getElementById('f-new-pass').value;
+            const errorMsg = document.getElementById('forgot-error');
+
+            if(!phone || !code || !newPass) {
+                errorMsg.innerText = '⛔ 请完整填写所有信息';
+                errorMsg.style.color = '#ff4683';
+                return;
+            }
 
             try {
-                const res = await fetch('http://127.0.0.1:8000/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                const res = await fetch("http://127.0.0.1:8000/forgot_password/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ phone: phone, new_password: newPass, code: code })
+                });
+
+                if (res.ok) {
+                    alert("✅ 密码重置成功，请使用新密码登录！");
+                    switchPanel('login-panel');
+                    document.getElementById('password').value = '';
+                } else {
+                    const data = await res.json();
+                    errorMsg.innerText = '⛔ ' + (data.detail || '重置失败');
+                    errorMsg.style.color = '#ff4683';
+                }
+            } catch (e) {
+                errorMsg.innerText = '⛔ 网络连接失败，请检查后端服务';
+                errorMsg.style.color = '#ff4683';
+            }
+        }
+
+        // 登录逻辑
+        async function attemptLogin() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            const err = document.getElementById('login-error');
+
+            if (!u || !p) { err.innerText = "⛔ 请输入账号和密码！"; return; }
+            err.innerText = "正在验证权限...";
+
+            try {
+                const res = await fetch("http://127.0.0.1:8000/login/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ username: u, password: p })
                 });
-                
-                const data = await res.json();
 
-                if (data.success) {
-                    err.style.display = 'none';
-                    
-                    // 【新增代码】：登录成功后，将身份信息存入浏览器的 LocalStorage
+                if (res.ok) {
+                    const data = await res.json();
                     localStorage.setItem("system_auth", "true");
                     localStorage.setItem("system_role", data.role);
-                    localStorage.setItem("system_username", u); 
-
-                    // 核心权限路由逻辑
-                    if (data.role === 'screen') {
-                        window.location.href = 'screen.html';
-                    } else if (data.role === 'admin') {
-                        window.location.href = 'admin.html';
-                    } else if (data.role === 'dev') {
-                        // 【修改代码】：开发者跳转到 Streamlit 时，在 URL 中加上一个简单的授权 Token
-                        window.location.href = 'http://localhost:8501/?auth_token=dev_granted'; 
-                    }
+                    localStorage.setItem("system_username", data.username);
+                    
+                    err.style.color = "#00eaff";
+                    err.innerText = "✅ 授权成功，正在初始化中枢...";
+                    
+                    setTimeout(() => {
+                        if (data.role === "dev" || data.role === "admin" || data.role === "root") {
+                            window.location.href = 'admin.html';
+                        } else if (data.role === "screen") {
+                            window.location.href = 'screen.html';
+                        } else {
+                            window.location.href = 'admin.html'; 
+                        }
+                    }, 800);
                 } else {
-                    err.innerText = data.message;
-                    err.style.display = 'block';
+                    err.innerText = "⛔ 账号或密码错误！";
                 }
-            } catch(e) {
-                err.innerText = "网络请求失败，请检查后端是否启动";
-                err.style.display = 'block';
+            } catch (e) {
+                err.innerText = "⛔ 无法连接到认证服务器！请检查后端是否启动。";
             }
-}
+        }
     </script>
 </body>
 </html>

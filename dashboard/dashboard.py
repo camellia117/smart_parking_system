@@ -3,6 +3,7 @@ import pandas as pd
 import joblib
 import os
 import sys
+import requests
 
 # 【关键设置】将项目根目录添加到搜索路径，解决模块导入 (ModuleNotFoundError) 问题
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -12,6 +13,9 @@ from backend.models import SystemUser, ParkingRecord
 
 # 配置 Streamlit 页面的标题和宽屏布局
 st.set_page_config(page_title="AI-Parking 开发者大本营", page_icon="👨‍💻", layout="wide")
+
+# 后端 API 基础地址
+API_URL = "http://127.0.0.1:8000"
 
 # ================= 【新增】页面鉴权拦截 (防越权访问) =================
 # 1. 初始化会话状态中的登录标记
@@ -33,12 +37,13 @@ if not st.session_state.is_authenticated:
     st.markdown("👉 [点击这里返回登录页面](http://127.0.0.1:5500/data_screen/login.html)") 
     st.stop()  # 关键点：st.stop() 会立刻停止执行后面的 Python 代码，保护数据安全
 
-
-
 # ================= 侧边栏导航 =================
 st.sidebar.title("👨‍💻 开发者核心中枢")
 st.sidebar.markdown("---")
 menu = st.sidebar.radio("📌 请选择控制台功能", ["🧠 AI 模型深度分析", "🔐 系统账号权限管理"])
+
+# 为了方便测试，在侧边栏加一个模拟身份切换
+current_role = st.sidebar.selectbox("🎭 当前操作身份 (模拟)", ["dev", "root", "admin"], help="只有 root 或 dev 可以进行修改和删除操作")
 
 # 工具函数：获取数据库会话
 def get_db():
@@ -48,8 +53,45 @@ def get_db():
     finally:
         db.close()
 
+# ================= 与 FastAPI 交互的辅助函数 =================
+def fetch_users(search_query=""):
+    try:
+        url = f"{API_URL}/system_users/"
+        if search_query:
+            url += f"?search={search_query}"
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.json()
+        return []
+    except Exception as e:
+        st.error(f"无法连接到后端 API，请确认 FastAPI (8000端口) 已启动: {e}")
+        return []
 
-# ================= 页面 1：AI 模型分析 =================
+def add_user(username, password, role, phone):
+    try:
+        data = {"username": username, "password": password, "role": role, "phone": phone}
+        response = requests.post(f"{API_URL}/system_users/", json=data)
+        return response.status_code == 200, response.json()
+    except Exception as e:
+        return False, {"detail": str(e)}
+
+def update_user(user_id, username, password, phone):
+    try:
+        data = {"id": user_id, "username": username, "password": password, "phone": phone}
+        response = requests.put(f"{API_URL}/system_users/", json=data)
+        return response.status_code == 200, response.json()
+    except Exception as e:
+        return False, {"detail": str(e)}
+
+def delete_user(user_id):
+    try:
+        response = requests.delete(f"{API_URL}/system_users/{user_id}")
+        return response.status_code == 200, response.json()
+    except Exception as e:
+        return False, {"detail": str(e)}
+
+
+# ================= 页面 1：AI 模型分析 (保持原有不动) =================
 if menu == "🧠 AI 模型深度分析":
     st.title("🧠 AI 预测模型状态大盘")
     st.markdown("这里是数据科学家和算法工程师的专属监控台，用于评估**随机森林多特征时序预测模型**的健康度。")
@@ -114,68 +156,107 @@ if menu == "🧠 AI 模型深度分析":
 # ================= 页面 2：系统账号权限管理 =================
 elif menu == "🔐 系统账号权限管理":
     st.title("🔐 全局 RBAC 权限与人员管理")
-    st.markdown("最高权限专区：在此分配系统账号，并控制其访问不同业务终端的权限。")
+    st.markdown("在此分配系统账号，并控制其访问不同业务终端的权限。支持多维度查询与信息修改。")
     
-    db = get_db()
+    # --- 1. 顶部查询区 ---
+    search_query = st.text_input("🔍 账号检索 (支持通过「登录名」或「手机号码」进行模糊匹配搜索)", "")
     
-    # 模块 A: 创建新账号表单
-    with st.expander("➕ 点击展开：添加系统新员工账号", expanded=True):
-        with st.form("add_user_form", clear_on_submit=True):
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                new_user = st.text_input("登录用户名 (Username)")
-            with col2:
-                new_pwd = st.text_input("登录密码 (Password)", type="password")
-            with col3:
-                # 角色字典映射
-                role_map = {
-                    "screen": "💻 数据大屏专员 (仅监控大屏)", 
-                    "admin": "⚙️ 业务管理员 (后台管理系统)", 
-                    "dev": "👨‍💻 高级开发者 (查看算法看板)"
-                }
-                new_role = st.selectbox("分配系统操作角色", list(role_map.keys()), format_func=lambda x: role_map[x])
+    # 获取后端用户数据
+    users = fetch_users(search_query)
+    
+    # --- 2. 账号展示区 ---
+    st.markdown("### 📋 系统人员登记表")
+    if users:
+        df = pd.DataFrame(users)
+        # 兼容旧数据库可能没有 phone 字段的情况
+        if 'phone' not in df.columns:
+            df['phone'] = ""
+            
+        # 选择要展示的列，并进行重命名和排序
+        display_df = df[['id', 'username', 'role', 'phone', 'password']]
+        display_df.columns = ['账户 ID', '登录名', '角色权限', '绑定手机号', '登录密码']
+        
+        # 隐藏最左侧自带的丑陋序号索引，让表格更像管理后台
+        st.dataframe(display_df, hide_index=True, use_container_width=True)
+        
+        # --- 3. 高级操作区 (只有 root 和 dev 才能看到并使用) ---
+        if current_role in ["root", "dev"]:
+            st.markdown("---")
+            st.subheader("🛠️ 高级安全操作区 (超级管理员权限)")
+            
+            op_col1, op_col2 = st.columns(2)
+            
+            # 编辑修改面板
+            with op_col1:
+                st.markdown("#### ✏️ 编辑与重置")
+                edit_id = st.selectbox("请选择要修改的【账户 ID】", df['id'].tolist(), key="edit_select")
                 
+                if edit_id:
+                    # 提取选中用户的当前信息填入表单
+                    target_user = df[df['id'] == edit_id].iloc[0]
+                    with st.form("edit_user_form"):
+                        new_username = st.text_input("登录名", value=target_user['username'])
+                        new_password = st.text_input("登录密码", value=target_user['password'])
+                        
+                        # 处理有些旧账号手机号是 null 的情况
+                        phone_val = target_user['phone']
+                        new_phone = st.text_input("绑定手机号", value=phone_val if pd.notna(phone_val) else "")
+                        
+                        if st.form_submit_button("💾 保存信息修改"):
+                            success, msg = update_user(edit_id, new_username, new_password, new_phone)
+                            if success:
+                                st.success("✅ 账号信息已成功更新！")
+                                st.rerun()  # 立即刷新页面更新表格
+                            else:
+                                st.error(f"❌ 更新失败: {msg.get('detail', msg)}")
+            
+            # 永久删除面板
+            with op_col2:
+                st.markdown("#### ⚠️ 危险操作")
+                del_id = st.selectbox("请选择要注销的【账户 ID】", df['id'].tolist(), key="del_select")
+                st.warning("注销后无法恢复，请谨慎操作！")
+                
+                if st.button("🗑️ 彻底注销该账号", type="primary"):
+                    if del_id:
+                        success, msg = delete_user(del_id)
+                        if success:
+                            st.success("✅ 账号已被永久删除！")
+                            st.rerun()
+                        else:
+                            st.error(f"❌ 删除失败: {msg.get('detail', msg)}")
+        else:
+            st.info("💡 提示: 您当前登录的身份为普通管理员，仅有查看权限。如需修改或删除账号，请使用 root 或 dev 身份登录。")
+    else:
+        st.warning("📭 未检索到符合条件的账号记录。")
+
+    # --- 4. 添加新账号区 ---
+    st.markdown("---")
+    st.subheader("➕ 添加系统新员工")
+    with st.form("add_user_form", clear_on_submit=True):
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            new_username = st.text_input("登录用户名 (Username)")
+            new_password = st.text_input("初始登录密码 (Password)")
+        with col2:
+            # 角色字典映射
+            role_map = {
+                "screen": "💻 数据大屏专员 (仅监控大屏)", 
+                "admin": "⚙️ 业务管理员 (后台管理系统)", 
+                "dev": "👨‍💻 高级开发者 (查看算法看板)"
+            }
+            new_role = st.selectbox("分配系统操作角色", list(role_map.keys()), format_func=lambda x: role_map[x])
+            new_phone = st.text_input("绑定手机号 (用于找回密码必填)")
+        with col3:
+            st.markdown("<br><br>", unsafe_allow_html=True)
             submitted = st.form_submit_button("✅ 创建并授权账号")
             
-            if submitted:
-                if new_user and new_pwd:
-                    # 检查用户名是否已经被注册
-                    exist = db.query(SystemUser).filter(SystemUser.username == new_user).first()
-                    if exist:
-                        st.error(f"❌ 注册失败：用户名 '{new_user}' 已存在，请更换！")
-                    else:
-                        u = SystemUser(username=new_user, password=new_pwd, role=new_role)
-                        db.add(u)
-                        db.commit()
-                        st.success(f"🎉 成功创建系统账号: **{new_user}**，已赋予 **{role_map[new_role]}** 权限！请刷新页面查看下方列表。")
+        if submitted:
+            if new_username and new_password and new_phone:
+                success, response = add_user(new_username, new_password, new_role, new_phone)
+                if success:
+                    st.success(f"🎉 成功创建 {new_role} 账号: **{new_username}**！")
+                    st.rerun()
                 else:
-                    st.warning("⚠️ 请完整填写用户名和密码！")
-
-    st.markdown("---")
-    
-    # 模块 B: 账号列表一览
-    st.subheader("📋 当前系统已注册员工名单")
-    users = db.query(SystemUser).all()
-    
-    if users:
-        user_data = []
-        for u in users:
-            # 翻译角色显示
-            role_display = {
-                "screen": "🌟 数据大屏专员", 
-                "admin": "🛡️ 业务管理员", 
-                "dev": "👑 高级开发者"
-            }.get(u.role, "未知角色")
-            
-            user_data.append({
-                "内部识别码 (ID)": u.id, 
-                "员工登录名": u.username, 
-                "系统分配权限": role_display,
-                "权限底层代码": u.role
-            })
-            
-        df_users = pd.DataFrame(user_data)
-        # 隐藏索引，显示更加美观
-        st.dataframe(df_users, hide_index=True, use_container_width=True)
-    else:
-        st.info("ℹ️ 目前数据库中没有任何账号记录。系统允许临时使用后门超级账号 (root) 进行登录操作。")
+                    st.error(f"❌ 创建失败: {response.get('detail', '未知错误')}")
+            else:
+                st.warning("⚠️ 请务必完整填写用户名、密码和手机号！")

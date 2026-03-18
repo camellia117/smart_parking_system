@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime
 from backend.database import Base
-
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean
+from sqlalchemy.orm import relationship
+from datetime import datetime
 
 
 class User(Base):
@@ -42,8 +43,8 @@ class ParkingRecord(Base):
     # 修改 backend/models.py，在最下面追加
 class SystemUser(Base):
     __tablename__ = "system_users"
-
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
-    password = Column(String)  # 毕设演示为了直观可暂用明文，答辩时可提一嘴工业界会用MD5/哈希
-    role = Column(String)      # 角色字段：'screen', 'admin', 'dev'
+    password = Column(String)  # 实际项目中应存储加密后的哈希值
+    role = Column(String) # root, dev, admin, screen 等
+    phone = Column(String, unique=True, index=True, nullable=True) # 新增手机号字段
