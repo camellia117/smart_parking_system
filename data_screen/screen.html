@@ -5,64 +5,96 @@
     <title>AI 智慧停车云控平台</title>
     <script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <script>
-        // 从 LocalStorage 读取登录状态和角色
         const isAuth = localStorage.getItem("system_auth");
-        const role = localStorage.getItem("system_role");
+        const role = (localStorage.getItem("system_role") || "").trim().toLowerCase();
         
-        // 如果没有登录记录，直接踢回登录页
         if (isAuth !== "true") {
             alert("⛔ 非法访问！请先通过统一身份认证中心登录。");
             window.location.href = "login.html"; 
         }
         
-        // 【可选】精细化权限控制：比如这里是 screen.html，可以限制只有 screen 或最高权限的 dev 才能看
-        // 如果你在改 admin.html，就把下面的 'screen' 换成 'admin'
-        if (role !== 'screen' && role !== 'dev') {
+        if (role !== 'screen' && role !== 'dev' && role !== 'admin') {
             alert("⛔ 权限不足：您的账号无权访问此页面！");
             window.location.href = "login.html"; 
         }
     </script>
     <style>
-        body { margin: 0; background: #000510; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+        /* 彻底锁定全局滚动 */
+        body { margin: 0; background: #000510; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; }
         
-        /* 粒子背景层 */
-        #particles-js {
-            position: absolute; width: 100%; height: 100%;
-            background-image: radial-gradient(circle, #001d4d 0%, #000510 100%);
-            z-index: 1;
-        }
+        #particles-js { position: fixed; width: 100%; height: 100vh; background-image: radial-gradient(circle, #001d4d 0%, #000510 100%); z-index: 1; }
 
-        /* 玻璃拟态容器 */
-        .main-content { position: relative; z-index: 2; height: 100vh; display: flex; flex-direction: column; }
+        .main-content { position: relative; z-index: 2; height: 100vh; display: flex; flex-direction: column; overflow: hidden;}
         
         .header {
-            height: 70px; background: rgba(0, 234, 255, 0.05);
-            backdrop-filter: blur(10px); border-bottom: 2px solid #00eaff33;
-            display: flex; justify-content: space-between; align-items: center; padding: 0 50px;
+            height: 70px; background: rgba(0, 234, 255, 0.05); backdrop-filter: blur(10px); border-bottom: 2px solid #00eaff33;
+            display: flex; justify-content: space-between; align-items: center; padding: 0 50px; flex-shrink: 0; 
         }
 
         .header h1 { 
-            background: linear-gradient(to right, #00eaff, #008cff);
-            -webkit-background-clip: text; color: transparent;
+            background: linear-gradient(to right, #00eaff, #008cff); -webkit-background-clip: text; color: transparent;
             font-size: 28px; letter-spacing: 5px; text-transform: uppercase;
         }
 
-        .container { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 20px; padding: 20px; flex: 1; }
-        
-        .panel {
-            background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(0, 234, 255, 0.1);
-            border-radius: 15px; padding: 15px; display: flex; flex-direction: column;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+        /* 轮播图架构 */
+        .carousel-container { position: relative; flex: 1; width: 100%; overflow: hidden; display: flex; flex-direction: column; }
+        .carousel-track { display: flex; width: 100%; height: 100%; transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1); }
+        .carousel-slide {
+            flex: 0 0 100%; width: 100%; height: 100%; overflow: hidden; 
+            padding: 20px 20px 40px 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 15px;
         }
 
-        .panel-title { color: #00eaff; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; }
+        .nav-btn {
+            position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0, 234, 255, 0.05); border: 1px solid rgba(0, 234, 255, 0.2);
+            color: #00eaff; font-size: 24px; padding: 20px 15px; cursor: pointer; backdrop-filter: blur(5px); transition: all 0.3s ease; z-index: 10;
+        }
+        .nav-btn:hover { background: rgba(0, 234, 255, 0.3); box-shadow: 0 0 20px rgba(0, 234, 255, 0.6); color: #fff; }
+        .prev-btn { left: 0; border-radius: 0 10px 10px 0; }
+        .next-btn { right: 0; border-radius: 10px 0 0 10px; }
+
+        .dots-container { position: absolute; bottom: 10px; width: 100%; text-align: center; z-index: 10; }
+        .dot { display: inline-block; width: 10px; height: 10px; margin: 0 8px; background: rgba(255, 255, 255, 0.2); border-radius: 50%; cursor: pointer; transition: all 0.3s ease; }
+        .dot.active { background: #00eaff; box-shadow: 0 0 10px #00eaff; transform: scale(1.5); }
+
+        /* 第一页原生样式 */
+        .container { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 20px; flex: 1; height: 100%; min-height: 0;}
+        .panel {
+            background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(0, 234, 255, 0.1); border-radius: 15px; padding: 15px; 
+            display: flex; flex-direction: column; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8); backdrop-filter: blur(5px);
+        }
+        .panel-title { color: #00eaff; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; flex-shrink: 0;}
         .panel-title::before { content: ""; width: 4px; height: 16px; background: #00eaff; margin-right: 8px; }
-
-        .chart { flex: 1; width: 100%; }
-
-        /* 数字跳动效果 */
+        .chart { flex: 1; width: 100%; min-height: 0; }
         .big-num { font-family: 'Orbitron', sans-serif; font-size: 42px; color: #00eaff; text-shadow: 0 0 15px #00eaff; }
+
+        /* ================= 第二页：复刻 Streamlit 卡片样式 ================= */
+        .st-title { font-size: 20px; color: #fff; margin: 0; font-weight: 500; display: flex; align-items: center; gap: 10px; flex-shrink: 0;}
+        
+        .st-card {
+            background: linear-gradient(145deg, rgba(20, 30, 50, 0.9), rgba(10, 15, 30, 0.8));
+            border: 1px solid rgba(0, 234, 255, 0.15); border-radius: 16px; padding: 15px; 
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .st-card:hover { transform: translateY(-5px); border-color: #00eaff; box-shadow: 0 10px 30px rgba(0,234,255,0.25); }
+        
+        .st-label { font-size: 1rem; color: #8cb6f5; font-weight: bold; }
+        .st-value { font-size: 2.2rem; font-weight: 900; color: #ffffff; text-shadow: 0 0 15px rgba(0,234,255,0.3); margin: 5px 0;}
+        .st-delta { font-size: 0.85rem; color: #ffeb7b; font-weight: bold; }
+        .st-delta.down { color: #ff4683; }
+
+        .lot-title { font-size: 1.1rem; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .lot-loc { font-size: 0.8rem; color: #8cb6f5; margin-top: 5px; }
+        .progress-bg { background: rgba(255,255,255,0.1); border-radius: 6px; width: 100%; height: 6px; margin: 10px 0; overflow: hidden;}
+        .progress-bar { height: 100%; border-radius: 6px; box-shadow: 0 0 8px currentColor; transition: width 0.5s ease; }
+        
+        /* 布局控制 */
+        .row-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; flex-shrink: 0; }
+        .row-lots { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; flex-shrink: 0; }
+        .row-bottom { display: flex; gap: 15px; flex: 1; min-height: 0; }
     </style>
 </head>
 <body>
@@ -74,96 +106,208 @@
             <div id="time" style="color: #8cb6f5; font-family: monospace;"></div>
         </div>
 
-        <div class="container">
-            <div class="col">
-                <div class="panel">
-                    <div class="panel-title">实时入场率</div>
-                    <div id="gaugeChart" class="chart"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-title">AI 识别流</div>
-                    <div style="background: #000; height: 150px; border-radius: 10px; position: relative; overflow: hidden;">
-                        <div style="width:100%; height:2px; background:#00eaff; position:absolute; animation: scan 2s infinite;"></div>
-                        <p style="font-size: 10px; color: #0f0; padding: 10px; font-family: monospace;">
-                            [AI SCANNING...]<br>
-                            PLATE: 粤B·88888 (98.2%)<br>
-                            STATUS: ENTEREDING...
-                        </p>
+        <div class="carousel-container">
+            <button class="nav-btn prev-btn" onclick="prevSlide()">&#10094;</button>
+            <button class="nav-btn next-btn" onclick="nextSlide()">&#10095;</button>
+
+            <div class="carousel-track" id="carouselTrack">
+                
+                <div class="carousel-slide">
+                    <div class="container">
+                        <div class="col" style="display: flex; flex-direction: column; gap: 20px;">
+                            <div class="panel" style="flex: 1;">
+                                <div class="panel-title">实时入场率</div>
+                                <div id="gaugeChart" class="chart"></div>
+                            </div>
+                            <div class="panel" style="flex: 0 0 180px;">
+                                <div class="panel-title">AI 识别流</div>
+                                <div style="background: #000; flex: 1; border-radius: 10px; position: relative; overflow: hidden;">
+                                    <div style="width:100%; height:2px; background:#00eaff; position:absolute; animation: scan 2s infinite;"></div>
+                                    <p style="font-size: 10px; color: #0f0; padding: 10px; font-family: monospace;">
+                                        [AI SCANNING...]<br>PLATE: 粤B·88888 (98.2%)<br>STATUS: ENTEREDING...
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel" style="flex: 1;">
+                            <div class="panel-title">AI 流量神经网络预测 (未来24h)</div>
+                            <div id="mainChart" class="chart"></div>
+                        </div>
+
+                        <div class="col" style="display: flex; flex-direction: column; gap: 20px;">
+                            <div class="panel" style="flex: 0 0 120px;">
+                                <div class="panel-title">今日总营收</div>
+                                <div class="big-num" id="val-revenue">¥0.00</div>
+                            </div>
+                            <div class="panel" style="flex: 1;">
+                                <div class="panel-title">营收占比分析</div>
+                                <div id="pieChart" class="chart"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="panel">
-                <div class="panel-title">AI 流量神经网络预测 (未来24h)</div>
-                <div id="mainChart" class="chart"></div>
-            </div>
+                <div class="carousel-slide">
+                    <div class="st-title"><i class="fa-solid fa-chart-line" style="color:#00eaff;"></i> 城市级实时监控大盘</div>
+                    
+                    <div class="row-metrics">
+                        <div class="st-card">
+                            <div class="st-label">🅿️ 累计服务车次</div>
+                            <div class="st-value" id="st-records">0</div>
+                            <div class="st-delta">⬆️ +12 辆 (较昨日)</div>
+                        </div>
+                        <div class="st-card">
+                            <div class="st-label">💰 实时累计流水</div>
+                            <div class="st-value" id="st-rev">¥ 0.00</div>
+                            <div class="st-delta">⬆️ +5.4% 营收</div>
+                        </div>
+                        <div class="st-card">
+                            <div class="st-label">⏱️ 平均驻留时长</div>
+                            <div class="st-value" id="st-time">0.0</div>
+                            <div class="st-delta down">⬇️ -0.2 小时</div>
+                        </div>
+                        <div class="st-card">
+                            <div class="st-label">🚨 违停警告</div>
+                            <div class="st-value">3</div>
+                            <div class="st-delta down">🛡️ 保安已就位</div>
+                        </div>
+                    </div>
 
-            <div class="col">
-                <div class="panel">
-                    <div class="panel-title">今日总营收</div>
-                    <div class="big-num" id="val-revenue">¥0.00</div>
+                    <div class="st-title" style="font-size: 16px; margin-top: 5px;"><i class="fa-solid fa-building"></i> 城市路网停车场实时阵列</div>
+                    <div class="row-lots" id="lot-container">
+                        <div class="st-card"><div class="st-label" style="text-align:center;">正在同步停车场数据...</div></div>
+                    </div>
+
+                    <div class="row-bottom">
+                        <div class="st-card" style="flex: 2;">
+                            <div class="st-label" style="margin-bottom: 10px;">🌐 AI 24小时流量预测曲线</div>
+                            <div id="stPredictChart" class="chart"></div>
+                        </div>
+                        <div class="st-card" style="flex: 1;">
+                            <div class="st-label" style="margin-bottom: 10px;">📷 关键通道实时快照</div>
+                            <div style="display: flex; flex-direction: column; gap: 10px; height: 100%;">
+                                <img src="https://images.unsplash.com/photo-1506521781263-d8422e82f27a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" style="width:100%; flex:1; min-height:0; object-fit:cover; border-radius:8px;">
+                                <img src="https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" style="width:100%; flex:1; min-height:0; object-fit:cover; border-radius:8px;">
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div id="pieChart" class="panel chart"></div>
+
+            </div> 
+
+            <div class="dots-container">
+                <span class="dot active" onclick="goToSlide(0)"></span>
+                <span class="dot" onclick="goToSlide(1)"></span>
             </div>
         </div>
     </div>
 
     <script>
-        // 初始化粒子背景
+        // 1. 初始化特效
         particlesJS('particles-js', {
-            particles: {
-                number: { value: 80 },
-                color: { value: '#00eaff' },
-                shape: { type: 'circle' },
-                opacity: { value: 0.5 },
-                size: { value: 3 },
-                line_linked: { enable: true, distance: 150, color: '#00eaff', opacity: 0.2, width: 1 },
-                move: { enable: true, speed: 2 }
-            }
+            particles: { number: { value: 80 }, color: { value: '#00eaff' }, shape: { type: 'circle' }, opacity: { value: 0.5 }, size: { value: 3 }, line_linked: { enable: true, distance: 150, color: '#00eaff', opacity: 0.2, width: 1 }, move: { enable: true, speed: 2 } }
         });
-
-        // 模拟扫描线动画
         const style = document.createElement('style');
         style.innerHTML = `@keyframes scan { 0% {top: 0;} 100% {top: 100%;} }`;
         document.head.appendChild(style);
 
-        // 初始化图表
+        // 2. 初始化 Echarts
         const mainChart = echarts.init(document.getElementById('mainChart'));
+        const stPredictChart = echarts.init(document.getElementById('stPredictChart'));
         
+        window.addEventListener('resize', () => {
+            mainChart.resize();
+            stPredictChart.resize();
+        });
+
+        // 3. 核心数据同步引擎
         async function updateData() {
             try {
-                // 调用你的 FastAPI 接口
-                const res = await fetch("http://127.0.0.1:8000/predict");
-                const data = await res.json();
+                // 请求 1: 预测曲线 (更新第一页和第二页的图表)
+                const resPred = await fetch("http://127.0.0.1:8000/predict");
+                const dataPred = await resPred.json();
                 
-                mainChart.setOption({
+                const chartOption = {
                     tooltip: { trigger: 'axis' },
-                    xAxis: { type: 'category', data: data.map(i=>i.hour + ":00"), axisLabel: {color: '#8cb6f5'} },
+                    xAxis: { type: 'category', data: dataPred.map(i=>i.hour + ":00"), axisLabel: {color: '#8cb6f5'} },
                     yAxis: { type: 'value', splitLine: {lineStyle: {color: '#112233'}} },
                     series: [{
-                        name: '预测车辆',
-                        data: data.map(i=>i.predicted_cars),
-                        type: 'line', smooth: true,
-                        symbol: 'none',
+                        name: '预测车辆', data: dataPred.map(i=>i.predicted_cars), type: 'line', smooth: true, symbol: 'none',
                         lineStyle: { width: 4, color: '#00eaff' },
-                        areaStyle: {
-                            color: new echarts.graphic.LinearGradient(0,0,0,1, [
-                                {offset: 0, color: 'rgba(0, 234, 255, 0.3)'},
-                                {offset: 1, color: 'transparent'}
-                            ])
-                        }
+                        areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1, [{offset: 0, color: 'rgba(0, 234, 255, 0.3)'},{offset: 1, color: 'transparent'}]) }
                     }]
-                });
-            } catch(e) { console.log("Backend not ready..."); }
-        }
+                };
+                mainChart.setOption(chartOption);
+                stPredictChart.setOption(chartOption);
 
+                // 请求 2: 全局统计 (更新第二页顶部四大金刚)
+                const resStats = await fetch("http://127.0.0.1:8000/statistics");
+                const dataStats = await resStats.json();
+                document.getElementById("st-records").innerText = dataStats.records || 0;
+                document.getElementById("st-rev").innerText = `¥ ${(dataStats.total_revenue || 0).toFixed(2)}`;
+                document.getElementById("st-time").innerText = (dataStats.avg_parking_time || 0).toFixed(1);
+
+                // 请求 3: 各停车场状态 (动态渲染第二页中间卡片)
+                const resLots = await fetch("http://127.0.0.1:8000/lots");
+                const dataLots = await resLots.json();
+                const lotContainer = document.getElementById("lot-container");
+                lotContainer.innerHTML = ''; // 清空加载提示
+                
+                dataLots.forEach(lot => {
+                    const total = lot.total_spaces || 0;
+                    const avail = lot.available_spaces || 0;
+                    const ratio = total === 0 ? 0 : avail / total;
+                    const ratioPct = Math.floor((1 - ratio) * 100);
+                    const color = ratioPct >= 90 ? '#ff4683' : '#00eaff';
+                    const deltaClass = ratioPct >= 90 ? 'st-delta down' : 'st-delta';
+                    
+                    lotContainer.innerHTML += `
+                        <div class="st-card" style="padding: 10px 15px;">
+                            <div class="lot-title">${lot.name}</div>
+                            <div class="lot-loc">📍 ${lot.location} | ¥${lot.price_per_hour}/h</div>
+                            <div class="progress-bg">
+                                <div class="progress-bar" style="width:${ratioPct}%; background:${color};"></div>
+                            </div>
+                            <div style="display:flex; justify-content: space-between; align-items: flex-end;">
+                                <div>
+                                    <div class="st-label" style="font-size:0.8rem;">实时余位</div>
+                                    <div class="st-value" style="font-size:1.6rem; margin:0;">${avail}<span style="font-size:1rem; color:#8cb6f5;">/${total}</span></div>
+                                </div>
+                                <div class="${deltaClass}">占用: ${ratioPct}%</div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+            } catch(e) { console.log("Backend sync failed...", e); }
+        }
+        
         setInterval(updateData, 5000);
         updateData();
         
-        // 更新时间
         setInterval(() => {
             document.getElementById('time').innerText = new Date().toLocaleString();
         }, 1000);
+
+        // 4. 轮播图控制
+        let currentIndex = 0;
+        const totalSlides = 2;
+        const track = document.getElementById('carouselTrack');
+        const dots = document.querySelectorAll('.dot');
+        let slideInterval;
+
+        function updateSlider() {
+            track.style.transform = `translateX(-${currentIndex * 100}%)`;
+            dots.forEach((dot, index) => dot.classList.toggle('active', index === currentIndex));
+        }
+        function nextSlide() { currentIndex = (currentIndex + 1) % totalSlides; updateSlider(); resetInterval(); }
+        function prevSlide() { currentIndex = (currentIndex - 1 + totalSlides) % totalSlides; updateSlider(); resetInterval(); }
+        function goToSlide(index) { currentIndex = index; updateSlider(); resetInterval(); }
+        function startInterval() { slideInterval = setInterval(nextSlide, 5000); }
+        function resetInterval() { clearInterval(slideInterval); startInterval(); }
+        
+        startInterval();
     </script>
 </body>
 </html>

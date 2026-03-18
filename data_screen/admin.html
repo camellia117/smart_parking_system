@@ -4,35 +4,31 @@
     <meta charset="utf-8">
     <title>智慧停车后台管理云平台</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
 
     <script>
-        // 从 LocalStorage 读取登录状态和角色
         const isAuth = localStorage.getItem("system_auth");
-        const role = localStorage.getItem("system_role");
+        const role = (localStorage.getItem("system_role") || "").trim().toLowerCase();
         
-        // 如果没有登录记录，直接踢回登录页
         if (isAuth !== "true") {
             alert("⛔ 非法访问！请先通过统一身份认证中心登录。");
             window.location.href = "login.html"; 
         }
         
-        // 【可选】精细化权限控制：比如这里是 screen.html，可以限制只有 screen 或最高权限的 dev 才能看
-        if (role !== 'admin' && role !== 'dev'&& role !== 'screen') {
+        if (role !== 'admin' && role !== 'dev' && role !== 'screen') {
             alert("⛔ 权限不足：您的账号无权访问此页面！");
             window.location.href = "login.html"; 
         }
-        
     </script>
     <style>
         /* 全局与科技感背景 */
         :root { --primary: #00eaff; --bg-dark: #050b14; --panel-bg: rgba(10, 25, 50, 0.7); }
         body { margin: 0; padding: 0; background: var(--bg-dark); color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; background-image: radial-gradient(circle at top right, #001d4d 0%, #050b14 100%); }
         
-        /* 整体布局：侧边栏 + 主内容区 */
         .app-container { display: flex; height: 100vh; }
 
         /* 侧边栏设计 */
-        .sidebar { width: 260px; background: rgba(5, 15, 30, 0.9); border-right: 1px solid rgba(0,234,255,0.2); backdrop-filter: blur(10px); display: flex; flex-direction: column; padding: 20px 0; z-index: 10; box-shadow: 5px 0 15px rgba(0,0,0,0.5);}
+        .sidebar { width: 260px; background: rgba(5, 15, 30, 0.9); border-right: 1px solid rgba(0,234,255,0.2); backdrop-filter: blur(10px); display: flex; flex-direction: column; padding: 20px 0; z-index: 10; box-shadow: 5px 0 15px rgba(0,0,0,0.5); flex-shrink: 0;}
         .logo { text-align: center; font-size: 22px; font-weight: bold; color: var(--primary); margin-bottom: 40px; letter-spacing: 2px; text-shadow: 0 0 10px var(--primary); }
         .nav-item { padding: 15px 30px; cursor: pointer; display: flex; align-items: center; gap: 15px; color: #8cb6f5; transition: all 0.3s ease; border-left: 4px solid transparent; }
         .nav-item:hover, .nav-item.active { background: linear-gradient(90deg, rgba(0,234,255,0.1) 0%, transparent 100%); color: #fff; border-left: 4px solid var(--primary); }
@@ -41,16 +37,14 @@
         /* 主内容区 */
         .main-content { flex: 1; padding: 30px; position: relative; overflow-y: auto; }
         
-        /* 页面容器（单页应用切换原理） */
         .page { display: none; animation: fadeIn 0.5s ease forwards; }
         .page.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* 页面标题 */
         .page-header { border-bottom: 1px solid rgba(0,234,255,0.2); padding-bottom: 15px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end;}
         .page-header h2 { margin: 0; color: #fff; font-weight: 300; letter-spacing: 1px; }
 
-        /* --- 模块1：车位监控地图样式 --- */
+        /* --- 车位监控地图样式 --- */
         .parking-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; }
         .spot { height: 140px; border-radius: 8px; border: 1px solid #333; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 18px; position: relative; overflow: hidden; transition: all 0.3s;}
         .spot.free { border-color: #00ff88; background: rgba(0, 255, 136, 0.05); color: #00ff88; }
@@ -59,7 +53,13 @@
         .spot i { font-size: 30px; margin-bottom: 10px; }
         .car-anim { position: absolute; font-size: 60px; color: rgba(255, 255, 255, 0.8); text-shadow: 0 5px 15px rgba(0,0,0,0.5); }
 
-        /* --- 模块2：数据表格样式 --- */
+        /* --- 车辆放行控制台 & 表格样式 --- */
+        .control-panel { background: rgba(20, 30, 50, 0.6); border: 1px solid rgba(0, 234, 255, 0.2); border-radius: 10px; padding: 20px; margin-bottom: 25px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;}
+        .control-input { background: rgba(0,0,0,0.5); border: 1px solid #333; color: #fff; padding: 10px 15px; border-radius: 5px; outline: none; flex: 1; min-width: 200px; transition: 0.3s; }
+        .control-input:focus { border-color: #00eaff; box-shadow: 0 0 10px rgba(0,234,255,0.2); }
+        .btn-action { background: linear-gradient(90deg, #008cff, #00eaff); color: #000; font-weight: bold; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; transition: 0.3s; white-space: nowrap;}
+        .btn-action:hover { box-shadow: 0 0 15px rgba(0,234,255,0.4); transform: translateY(-2px); }
+
         .data-table { width: 100%; border-collapse: collapse; background: var(--panel-bg); border-radius: 10px; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.5); backdrop-filter: blur(5px);}
         .data-table th, .data-table td { padding: 15px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .data-table th { background: rgba(0, 234, 255, 0.1); color: var(--primary); font-weight: bold; letter-spacing: 1px; }
@@ -67,12 +67,16 @@
         .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
         .status-badge.in { background: rgba(0, 255, 136, 0.2); color: #00ff88; border: 1px solid #00ff88; }
         .status-badge.out { background: rgba(140, 182, 245, 0.2); color: #8cb6f5; border: 1px solid #8cb6f5; }
-        .page iframe {
-            border-radius: 10px;
-            background: white; /* 或者 transparent */
-            box-shadow: 0 0 20px rgba(0,0,0,0.3);
-            min-height: 800px;
-        }
+
+        /* --- 财务与 AI 卡片样式 --- */
+        .metric-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
+        .m-card { background: linear-gradient(145deg, rgba(20, 30, 50, 0.9), rgba(10, 15, 30, 0.8)); border: 1px solid rgba(0, 234, 255, 0.15); border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); transition: 0.3s; }
+        .m-card:hover { transform: translateY(-5px); border-color: #00eaff; box-shadow: 0 10px 30px rgba(0,234,255,0.25); }
+        .m-title { color: #8cb6f5; font-size: 1rem; font-weight: bold; margin-bottom: 10px; }
+        .m-value { font-size: 2.2rem; font-weight: 900; color: #fff; text-shadow: 0 0 15px rgba(0,234,255,0.3); }
+        .m-sub { color: #00eaff; font-size: 0.85rem; margin-top: 5px; }
+
+        .chart-container { background: rgba(20, 30, 50, 0.6); border: 1px solid rgba(0, 234, 255, 0.1); border-radius: 15px; padding: 20px; height: 400px; }
     </style>
 </head>
 <body>
@@ -85,56 +89,47 @@
                 <i class="fa-solid fa-map-location-dot"></i> 车位全景视图
             </div>
             <div class="nav-item" onclick="switchPage('page-records', this)">
-                <i class="fa-solid fa-list-check"></i> 车辆进出流水
+                <i class="fa-solid fa-list-check"></i> 车辆放行与记录
             </div>
-            <div class="nav-item" onclick="openBigScreen()">
-                <i class="fa-solid fa-display"></i> AI 预测大屏 <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 12px; margin-left: auto;"></i>
-            </div>
-            <div class="nav-item" onclick="switchPage('page-dashboard-v8', this)">
-                <i class="fa-solid fa-gauge-high"></i> 智慧停车管控中枢
-            </div>
-            <div class="nav-item" onclick="switchPage('page-st-1', this)">
-                <i class="fa-solid fa-chart-line"></i> 实时监控大盘
-            </div>
-            <div class="nav-item" onclick="switchPage('page-st-2', this)">
-                <i class="fa-solid fa-car-burst"></i> 车辆放行与记录
-            </div>
-            <div class="nav-item" onclick="switchPage('page-st-3', this)">
+            <div class="nav-item" onclick="switchPage('page-finance', this)">
                 <i class="fa-solid fa-robot"></i> AI预测与财务分析
+            </div>
+            <div class="nav-item" onclick="window.open('screen.html', '_blank')">
+                <i class="fa-solid fa-display"></i> AI 监控大屏 <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 12px; margin-left: auto;"></i>
             </div>
         </div>
 
         <div class="main-content">
             
             <div id="page-map" class="page active">
-
                 <div class="page-header">
                     <h2><i class="fa-solid fa-map-location-dot"></i> 实时车位状态云图</h2>
                     <div style="color: #8cb6f5;">当前空余: <span id="free-count" style="color:#00ff88; font-size: 24px; font-weight: bold;">--</span> 席</div>
                 </div>
-                <div class="parking-grid" id="parking-grid">
-                    </div>
-                </div>
+                <div class="parking-grid" id="parking-grid"></div>
+            </div>
 
             <div id="page-records" class="page">
                 <div class="page-header">
-                    <h2><i class="fa-solid fa-list-check"></i> 车辆进出流水大厅</h2>
-                    <button style="background: var(--primary); color: #000; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;" onclick="loadRecords()">
-                        <i class="fa-solid fa-rotate-right"></i> 刷新数据
-                    </button>
-                </div>
-            <div id="page-st-1" class="page">
-                    <iframe src="http://localhost:8503/?menu=1" width="100%" height="850px" frameborder="0" style="border-radius: 10px; background: transparent;"></iframe>
+                    <h2><i class="fa-solid fa-car-burst"></i> 车辆通行管理中心</h2>
+                    <button class="btn-action" onclick="loadRecords()"><i class="fa-solid fa-rotate-right"></i> 刷新数据</button>
                 </div>
                 
-            <div id="page-st-2" class="page">
-                    <iframe src="http://localhost:8503/?menu=2" width="100%" height="850px" frameborder="0" style="border-radius: 10px; background: transparent;"></iframe>
+                <div class="control-panel">
+                    <div style="flex: 100%; color: #8cb6f5; font-weight: bold; margin-bottom: 5px;"><i class="fa-solid fa-screwdriver-wrench"></i> 异常车辆远程处理台</div>
+                    <input type="text" id="manual-plate" class="control-input" placeholder="输入车牌号 (例如：粤B·88888)">
+                    <select id="manual-gate" class="control-input" style="cursor: pointer;">
+                        <option value="东门入口">东门入口</option>
+                        <option value="南门出口">南门出口</option>
+                        <option value="地下VIP入口">地下VIP入口</option>
+                    </select>
+                    <button class="btn-action" onclick="manualReleaseGate()"><i class="fa-solid fa-unlock-keyhole"></i> 确认身份并强制抬杆</button>
                 </div>
-                
-            <div id="page-st-3" class="page">
-                    <iframe src="http://localhost:8503/?menu=3" width="100%" height="850px" frameborder="0" style="border-radius: 10px; background: transparent;"></iframe>
+
+                <div style="margin-bottom: 15px;">
+                    <input type="text" id="search-record" class="control-input" placeholder="🔍 模糊搜索记录 (车牌/ID)..." onkeyup="filterTable()">
                 </div>
-                <table class="data-table">
+                <table class="data-table" id="record-table">
                     <thead>
                         <tr>
                             <th>记录 ID</th>
@@ -150,121 +145,219 @@
                     </tbody>
                 </table>
             </div>
-            <div id="page-dashboard-v8" class="page">
+            
+            <div id="page-finance" class="page">
                 <div class="page-header">
-                    <h2><i class="fa-solid fa-gauge-high"></i> 智慧停车管控中枢 V8</h2>
+                    <h2><i class="fa-solid fa-chart-line"></i> 财务报表与模型洞察</h2>
                 </div>
-                <iframe src="http://localhost:8503" width="100%" height="800px" frameborder="0" style="border-radius: 10px; background: transparent; box-shadow: 0 0 20px rgba(0,0,0,0.3);"></iframe>
+                
+                <h3 style="color: #8cb6f5; border-left: 4px solid #00eaff; padding-left: 10px;">Veo 停车需求预测模型状态</h3>
+                <div class="metric-cards">
+                    <div class="m-card">
+                        <div class="m-title">🤖 模型版本</div>
+                        <div class="m-value">v2.4.1</div>
+                        <div class="m-sub">XGBoost 引擎驱动</div>
+                    </div>
+                    <div class="m-card">
+                        <div class="m-title">🎯 最新 R² 得分</div>
+                        <div class="m-value" style="color: #00ff88;">0.92</div>
+                        <div class="m-sub">拟合度极佳</div>
+                    </div>
+                    <div class="m-card">
+                        <div class="m-title">⏳ 下次重训时间</div>
+                        <div class="m-value" style="color: #ffeb7b;">03:00</div>
+                        <div class="m-sub">今晚自动执行</div>
+                    </div>
+                </div>
+
+                <h3 style="color: #8cb6f5; border-left: 4px solid #00eaff; padding-left: 10px; margin-top: 40px;">💰 近7天收益趋势分析</h3>
+                <div class="chart-container" id="financeChart"></div>
             </div>
 
         </div>
     </div>
 
     <script>
-        // 1. 单页应用 (SPA) 路由切换逻辑
+        // --- 1. 单页路由切换 ---
         function switchPage(pageId, element) {
-            // 移除所有激活状态
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
             
-            // 激活当前选中
             element.classList.add('active');
             document.getElementById(pageId).classList.add('active');
 
-            // 如果切换到了流水页，自动请求后端数据
-            if(pageId === 'page-records') {
-                loadRecords();
-            }
+            if(pageId === 'page-records') loadRecords();
+            if(pageId === 'page-finance') initFinanceChart(); // 切换到财务页时渲染图表
         }
 
-        // 2. 跳转到炫酷大屏
-        function openBigScreen() {
-            // 在新标签页打开你之前写的 screen.html
-            window.open('screen.html', '_blank');
-        }
-
-        // 3. 渲染炫酷的 2D 车位地图
+        // --- 2. 车位地图渲染 ---
         function renderMap() {
             const grid = document.getElementById('parking-grid');
+            if(!grid) return;
             grid.innerHTML = '';
             let freeCount = 0;
-            const totalSpots = 40; // 假设停车场有 40 个车位
+            const totalSpots = 40; 
 
             for (let i = 1; i <= totalSpots; i++) {
-                // 随机生成占有率 (真实项目中这里应由后端接口返回)
                 const isOccupied = Math.random() > 0.6; 
-                
                 const spotDiv = document.createElement('div');
                 spotDiv.className = `spot ${isOccupied ? 'occupied' : 'free'}`;
                 
                 if (isOccupied) {
-                    spotDiv.innerHTML = `
-                        <div class="car-anim"><i class="fa-solid fa-car-side"></i></div>
-                        <span style="z-index: 2; margin-top: 50px;">A-${i.toString().padStart(3, '0')}</span>
-                    `;
+                    spotDiv.innerHTML = `<div class="car-anim"><i class="fa-solid fa-car-side"></i></div><span style="z-index: 2; margin-top: 50px;">A-${i.toString().padStart(3, '0')}</span>`;
                 } else {
                     freeCount++;
-                    spotDiv.innerHTML = `
-                        <i class="fa-solid fa-square-parking"></i>
-                        <span>A-${i.toString().padStart(3, '0')}</span>
-                    `;
+                    spotDiv.innerHTML = `<i class="fa-solid fa-square-parking"></i><span>A-${i.toString().padStart(3, '0')}</span>`;
                 }
                 grid.appendChild(spotDiv);
             }
             document.getElementById('free-count').innerText = freeCount;
         }
 
-        // 4. 调用 FastAPI 后端接口获取真实流水数据
+        // --- 3. 车辆放行管理 ---
+        function manualReleaseGate() {
+            const plate = document.getElementById('manual-plate').value;
+            const gate = document.getElementById('manual-gate').value;
+            if(!plate) {
+                alert("⚠️ 请先输入需要放行的车牌号！");
+                return;
+            }
+            // 模拟下发指令的延迟感
+            const btn = document.querySelector('.control-panel .btn-action');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 指令下发中...';
+            
+            setTimeout(() => {
+                alert(`✅ 成功！\n放行通道：${gate}\n放行车辆：${plate}\n道闸已强制抬起。`);
+                document.getElementById('manual-plate').value = '';
+                btn.innerHTML = originalText;
+            }, 800);
+        }
+
+        // --- 4. 获取与渲染流水表格 ---
+        let allRecords = []; // 缓存数据用于搜索过滤
         async function loadRecords() {
             const tbody = document.getElementById('records-tbody');
             tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #00eaff;"><i class="fa-solid fa-spinner fa-spin"></i> 正在连接 FastAPI 核心...</td></tr>';
             
             try {
-                // 调用你 backend/main.py 里的 @app.get("/records") 接口
                 const response = await fetch('http://127.0.0.1:8000/records');
-                const data = await response.json();
-                
-                tbody.innerHTML = '';
-                
-                // 倒序排列，让最新的记录在上面，并只取前 20 条展示
-                const recentData = data.reverse().slice(0, 20);
-
-                recentData.forEach(record => {
-                    const tr = document.createElement('tr');
-                    const isLeft = record.leave_time !== null;
-                    const statusHtml = isLeft 
-                        ? `<span class="status-badge out">已离场</span>` 
-                        : `<span class="status-badge in"><i class="fa-solid fa-circle-dot" style="font-size:8px; animation: pulse 1.5s infinite;"></i> 场内停泊</span>`;
-                    
-                    const fee = record.fee ? `¥${record.fee.toFixed(2)}` : '--';
-                    
-                    // 格式化时间字符串
-                    const formatTime = (timeStr) => {
-                        if(!timeStr) return '--';
-                        return new Date(timeStr).toLocaleString('zh-CN', {hour12: false});
-                    };
-
-                    tr.innerHTML = `
-                        <td style="color: #8cb6f5;">#REQ-${record.id}</td>
-                        <td><i class="fa-solid fa-user-astronaut"></i> U-${record.user_id}</td>
-                        <td>${formatTime(record.enter_time)}</td>
-                        <td>${formatTime(record.leave_time)}</td>
-                        <td style="color: #ffeb7b; font-weight: bold;">${fee}</td>
-                        <td>${statusHtml}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
+                allRecords = await response.json();
+                allRecords.reverse(); // 倒序
+                renderTable(allRecords.slice(0, 50)); // 默认展示前50条
             } catch (error) {
-                console.error("无法获取数据:", error);
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #ff4683;"><i class="fa-solid fa-triangle-exclamation"></i> 无法连接到后端，请确保 uvicorn backend.main:app --reload 正在运行</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #ff4683;"><i class="fa-solid fa-triangle-exclamation"></i> 无法连接到后端API。</td></tr>`;
             }
         }
 
-        // 页面加载完毕后初始化车位图
+        function renderTable(data) {
+            const tbody = document.getElementById('records-tbody');
+            tbody.innerHTML = '';
+            
+            const formatTime = (timeStr) => {
+                if(!timeStr) return '--';
+                return new Date(timeStr).toLocaleString('zh-CN', {hour12: false});
+            };
+
+            data.forEach(record => {
+                const tr = document.createElement('tr');
+                const isLeft = record.leave_time !== null;
+                const statusHtml = isLeft 
+                    ? `<span class="status-badge out">已离场</span>` 
+                    : `<span class="status-badge in"><i class="fa-solid fa-circle-dot" style="font-size:8px; animation: pulse 1.5s infinite;"></i> 场内停泊</span>`;
+                
+                const fee = record.fee ? `¥${record.fee.toFixed(2)}` : '--';
+                
+                tr.innerHTML = `
+                    <td style="color: #8cb6f5;">#REQ-${record.id}</td>
+                    <td><i class="fa-solid fa-user-astronaut"></i> U-${record.user_id}</td>
+                    <td>${formatTime(record.enter_time)}</td>
+                    <td>${formatTime(record.leave_time)}</td>
+                    <td style="color: #ffeb7b; font-weight: bold;">${fee}</td>
+                    <td>${statusHtml}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterTable() {
+            const keyword = document.getElementById('search-record').value.toLowerCase();
+            const filtered = allRecords.filter(r => 
+                String(r.id).toLowerCase().includes(keyword) || 
+                String(r.user_id).toLowerCase().includes(keyword)
+            );
+            renderTable(filtered.slice(0, 50));
+        }
+
+        // --- 5. 财务报表 ECharts 渲染 ---
+        let financeChartInstance = null;
+        function initFinanceChart() {
+            const chartDom = document.getElementById('financeChart');
+            if(!chartDom) return;
+            
+            if(!financeChartInstance) {
+                financeChartInstance = echarts.init(chartDom);
+            }
+            
+            // 模拟最近 7 天的日期和收益数据
+            const dates = [];
+            for(let i=6; i>=0; i--) {
+                let d = new Date();
+                d.setDate(d.getDate() - i);
+                dates.push(`${d.getMonth()+1}-${d.getDate()}`);
+            }
+            const revenues = [1200, 1500, 1100, 1800, 2200, 3100, 2800];
+
+            const option = {
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                grid: { left: '3%', right: '4%', bottom: '5%', top: '10%', containLabel: true },
+                xAxis: { 
+                    type: 'category', 
+                    data: dates, 
+                    axisLabel: { color: '#8cb6f5' },
+                    axisLine: { lineStyle: { color: 'rgba(0, 234, 255, 0.2)' } }
+                },
+                yAxis: { 
+                    type: 'value', 
+                    name: '收益 (元)', 
+                    nameTextStyle: { color: '#8cb6f5' },
+                    axisLabel: { color: '#8cb6f5' },
+                    splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }
+                },
+                series: [{
+                    name: '日收益',
+                    type: 'bar',
+                    barWidth: '40%',
+                    data: revenues,
+                    itemStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: '#00eaff' },
+                            { offset: 1, color: '#008cff' }
+                        ]),
+                        borderRadius: [5, 5, 0, 0]
+                    },
+                    label: {
+                        show: true,
+                        position: 'top',
+                        color: '#fff',
+                        formatter: '¥{c}'
+                    }
+                }]
+            };
+            financeChartInstance.setOption(option);
+        }
+
+        // 窗口缩放自适应
+        window.addEventListener('resize', () => {
+            if(financeChartInstance) financeChartInstance.resize();
+        });
+
+        // 页面初始化
         window.onload = () => {
             renderMap();
-            // 每 10 秒刷新一下车位图，模拟车辆进出的动态感
             setInterval(renderMap, 10000); 
+            // 确保加载时展示当前活动页面的数据
+            if(document.getElementById('page-records').classList.contains('active')) loadRecords();
         };
     </script>
 </body>
