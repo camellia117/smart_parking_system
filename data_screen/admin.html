@@ -67,6 +67,12 @@
         .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
         .status-badge.in { background: rgba(0, 255, 136, 0.2); color: #00ff88; border: 1px solid #00ff88; }
         .status-badge.out { background: rgba(140, 182, 245, 0.2); color: #8cb6f5; border: 1px solid #8cb6f5; }
+        .page iframe {
+            border-radius: 10px;
+            background: white; /* 或者 transparent */
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            min-height: 800px;
+        }
     </style>
 </head>
 <body>
@@ -101,13 +107,14 @@
         <div class="main-content">
             
             <div id="page-map" class="page active">
+
                 <div class="page-header">
                     <h2><i class="fa-solid fa-map-location-dot"></i> 实时车位状态云图</h2>
                     <div style="color: #8cb6f5;">当前空余: <span id="free-count" style="color:#00ff88; font-size: 24px; font-weight: bold;">--</span> 席</div>
                 </div>
                 <div class="parking-grid" id="parking-grid">
                     </div>
-            </div>
+                </div>
 
             <div id="page-records" class="page">
                 <div class="page-header">
@@ -116,16 +123,16 @@
                         <i class="fa-solid fa-rotate-right"></i> 刷新数据
                     </button>
                 </div>
-                <div id="page-st-1" class="page">
-                    <iframe src="http://localhost:8502/?menu=1" width="100%" height="850px" frameborder="0" style="border-radius: 10px; background: transparent;"></iframe>
+            <div id="page-st-1" class="page">
+                    <iframe src="http://localhost:8503/?menu=1" width="100%" height="850px" frameborder="0" style="border-radius: 10px; background: transparent;"></iframe>
                 </div>
                 
-                <div id="page-st-2" class="page">
-                    <iframe src="http://localhost:8502/?menu=2" width="100%" height="850px" frameborder="0" style="border-radius: 10px; background: transparent;"></iframe>
+            <div id="page-st-2" class="page">
+                    <iframe src="http://localhost:8503/?menu=2" width="100%" height="850px" frameborder="0" style="border-radius: 10px; background: transparent;"></iframe>
                 </div>
                 
-                <div id="page-st-3" class="page">
-                    <iframe src="http://localhost:8502/?menu=3" width="100%" height="850px" frameborder="0" style="border-radius: 10px; background: transparent;"></iframe>
+            <div id="page-st-3" class="page">
+                    <iframe src="http://localhost:8503/?menu=3" width="100%" height="850px" frameborder="0" style="border-radius: 10px; background: transparent;"></iframe>
                 </div>
                 <table class="data-table">
                     <thead>
@@ -147,7 +154,7 @@
                 <div class="page-header">
                     <h2><i class="fa-solid fa-gauge-high"></i> 智慧停车管控中枢 V8</h2>
                 </div>
-                <iframe src="http://localhost:8502" width="100%" height="800px" frameborder="0" style="border-radius: 10px; background: transparent; box-shadow: 0 0 20px rgba(0,0,0,0.3);"></iframe>
+                <iframe src="http://localhost:8503" width="100%" height="800px" frameborder="0" style="border-radius: 10px; background: transparent; box-shadow: 0 0 20px rgba(0,0,0,0.3);"></iframe>
             </div>
 
         </div>

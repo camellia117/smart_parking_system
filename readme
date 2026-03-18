@@ -29,7 +29,7 @@ uvicorn backend.main:app --reload
 第二步：查看 Streamlit 监控后台 (dashboard.py)
 在 Cursor 中新开一个终端窗口（点击终端面板右上角的 + 号），确保你仍在项目根目录下，运行以下命令：
 
-streamlit run dashboard/dashboard.py
+streamlit run dashboard/dashboard.py --server.port 8502
 
 运行后，你的默认浏览器会自动打开一个网页（通常是 http://localhost:8501）。
 
@@ -44,7 +44,9 @@ python -m http.server 5500
 这行命令的意思是：把当前目录作为一个网站跑起来，端口是 5500。
 
 第五步:
-streamlit run dashboard/11.py --server.port 8502
+streamlit run dashboard/11.py --server.port 8503
+# 进入项目根目录后运行 dashboard 脚本
+
 
 
 登陆页面：
