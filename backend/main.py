@@ -23,8 +23,6 @@ app.add_middleware(
 )
 # ===================================
 
-# 下面是你原有的路由代码...
-
 models.Base.metadata.create_all(bind=engine)
 
 @app.get("/")
@@ -54,35 +52,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-# 2. 定义前端传过来的登录数据格式
-class LoginRequest(BaseModel):
-    username: str
-    password: str
-
-# 3. 登录接口
-# ====== 【更新】连接真实数据库的登录接口 ======
-@app.post("/login")
-def login(req: LoginRequest, db: Session = Depends(get_db)):
-    # 1. 保留一个特殊的“后门（root）”账号：
-    # 因为系统刚初始化时数据库里没有任何账号，你需要一个超级账号先登进去，
-    # 进入 dashboard 页面后，再通过表单创建真实的员工账号。
-    if req.username == "root" and req.password == "123456":
-        return {"success": True, "role": "dev", "message": "系统初始超管登录"}
-        
-    # 2. 从真实的数据库表 (SystemUser) 中查询账号和密码
-    user = db.query(models.SystemUser).filter(
-        models.SystemUser.username == req.username, 
-        models.SystemUser.password == req.password
-    ).first()
-    
-    # 3. 判断查询结果并返回前端需要的格式
-    if user:
-        # 如果能在数据库里找到这个人，就返回他真正的角色权限 (user.role)
-        return {"success": True, "role": user.role, "message": "验证通过"}
-    else:
-        # 找不到人或者密码错误
-        return {"success": False, "message": "账号或密码错误！请检查输入。"}
     
 # 定义 Pydantic 模型用于接收数据
 class UserCreate(BaseModel):
@@ -189,13 +158,23 @@ def forgot_password(req: ForgotPasswordReq, db: Session = Depends(get_db)):
     del mock_verification_codes[req.phone]
     return {"message": "Password reset successfully"}
 
-# 修改 login 接口支持返回手机号
+# ====== 唯一的、清理后的登录接口 ======
 class LoginReq(BaseModel):
     username: str
     password: str
 
 @app.post("/login/")
 def login(req: LoginReq, db: Session = Depends(get_db)):
+    # 1. 拦截检查：设置 root 账号和 12345678 密码，强制返回 dev 角色
+    if req.username == "root" and req.password == "12345678":
+        return {
+            "message": "Login successful", 
+            "role": "dev", 
+            "username": "root", 
+            "phone": None
+        }
+
+    # 2. 普通用户的真实数据库校验逻辑
     user = db.query(models.SystemUser).filter(
         models.SystemUser.username == req.username,
         models.SystemUser.password == req.password
@@ -204,4 +183,9 @@ def login(req: LoginReq, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=401, detail="Invalid username or password")
     
-    return {"message": "Login successful", "role": user.role, "username": user.username, "phone": user.phone}
+    return {
+        "message": "Login successful", 
+        "role": user.role, 
+        "username": user.username, 
+        "phone": user.phone
+    }
