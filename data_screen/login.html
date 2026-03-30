@@ -5,7 +5,6 @@
     <title>SMART PARKING AI-OS | 统一身份认证</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* [样式代码与原版类似，省略部分以节省空间，你需要保留原有的 CSS，并添加以下针对新元素的样式] */
         body { margin: 0; background: #000510; color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         .login-container { background: rgba(10, 25, 50, 0.8); border: 1px solid rgba(0, 234, 255, 0.3); border-radius: 15px; padding: 40px; width: 380px; box-shadow: 0 0 30px rgba(0, 234, 255, 0.2); backdrop-filter: blur(10px); position: relative; z-index: 2; transition: all 0.3s ease; }
         .title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 30px; background: linear-gradient(to right, #00eaff, #008cff); -webkit-background-clip: text; color: transparent; letter-spacing: 2px; }
@@ -15,9 +14,11 @@
         .input-group input:focus { border-color: #00eaff; box-shadow: 0 0 10px rgba(0, 234, 255, 0.3); }
         
         /* 验证码组样式 */
-        .code-group { display: flex; gap: 10px; }
-        .code-group input { flex: 1; }
-        .btn-code { background: rgba(0, 234, 255, 0.1); border: 1px solid #00eaff; color: #00eaff; padding: 0 15px; border-radius: 8px; cursor: pointer; white-space: nowrap; transition: 0.3s; }
+        .code-group { display: flex; gap: 10px; align-items: center; }
+        .code-group input { flex: 1; margin-bottom: 0; }
+        .captcha-img { height: 42px; border-radius: 8px; cursor: pointer; border: 1px solid rgba(0, 234, 255, 0.2); }
+        
+        .btn-code { background: rgba(0, 234, 255, 0.1); border: 1px solid #00eaff; color: #00eaff; padding: 0 15px; height: 42px; border-radius: 8px; cursor: pointer; white-space: nowrap; transition: 0.3s; }
         .btn-code:hover { background: rgba(0, 234, 255, 0.2); }
         .btn-code:disabled { color: #555; border-color: #555; cursor: not-allowed; }
 
@@ -35,7 +36,6 @@
 </head>
 <body>
     <div class="login-container">
-        
         <div id="login-panel" class="panel active">
             <div class="title">SMART PARKING AI-OS</div>
             <div class="input-group">
@@ -46,6 +46,17 @@
                 <i class="fa-solid fa-lock"></i>
                 <input type="password" id="password" placeholder="请输入访问密钥">
             </div>
+            <div class="input-group code-group">
+                <i class="fa-solid fa-image"></i>
+                <input type="text" id="captcha-text" placeholder="图形验证码 (不区分大小写)">
+                <img id="captcha-img" class="captcha-img" src="" alt="获取中..." onclick="loadCaptcha()" title="看不清？点击刷新">
+            </div>
+            <div class="input-group code-group">
+                <i class="fa-solid fa-shield-halved"></i>
+                <input type="text" id="sms-code" placeholder="短信验证码">
+                <button class="btn-code" id="btn-login-sms" onclick="sendLoginSms()">获取短信</button>
+            </div>
+            
             <button class="btn-login" onclick="attemptLogin()"><i class="fa-solid fa-right-to-bracket"></i> 安全登入</button>
             <span class="link-text" onclick="switchPanel('forgot-panel')">忘记密码？找回密钥</span>
             <div class="error-msg" id="login-error"></div>
@@ -74,11 +85,136 @@
     </div>
 
     <script>
-        // 切换面板
+        // ======= 全局变量与页面初始化 =======
+        let currentCaptchaId = "";
+        
+        window.onload = function() {
+            loadCaptcha();
+        }
+
         function switchPanel(panelId) {
             document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
             document.getElementById(panelId).classList.add('active');
             document.querySelectorAll('.error-msg').forEach(e => e.innerText = '');
+        }
+
+        // ======= 【新增】加载/刷新图形验证码 =======
+        async function loadCaptcha() {
+            try {
+                const res = await fetch("http://127.0.0.1:8000/get_captcha/");
+                const data = await res.json();
+                document.getElementById('captcha-img').src = data.image;
+                currentCaptchaId = data.captcha_id;
+                document.getElementById('captcha-text').value = ''; // 刷新时清空输入框
+            } catch (e) {
+                document.getElementById('login-error').innerText = "⛔ 无法连接服务器获取验证码";
+            }
+        }
+
+        // ======= 【新增】请求发送登录短信 =======
+        let loginCountdown = 60;
+        let loginTimer = null;
+
+        async function sendLoginSms() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            const c = document.getElementById('captcha-text').value;
+            const err = document.getElementById('login-error');
+
+            if (!u || !p || !c) {
+                err.innerText = "⛔ 请先输入账号、密码和图形验证码";
+                return;
+            }
+
+            const btn = document.getElementById('btn-login-sms');
+            btn.disabled = true;
+            err.innerText = "正在核对信息，请稍候...";
+
+            try {
+                const res = await fetch("http://127.0.0.1:8000/send_login_sms/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        username: u,
+                        password: p,
+                        captcha_id: currentCaptchaId,
+                        captcha_text: c
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    // 【测试专用】将模拟验证码打印在屏幕上
+                    err.innerText = `✅ 短信已发送至 ${data.phone} (验证码: ${data.mock_code})`;
+                    err.style.color = '#00ff88';
+                    
+                    loginTimer = setInterval(() => {
+                        loginCountdown--;
+                        btn.innerText = `${loginCountdown}s 后重发`;
+                        if (loginCountdown <= 0) {
+                            clearInterval(loginTimer);
+                            btn.disabled = false;
+                            btn.innerText = '获取短信';
+                            loginCountdown = 60;
+                            loadCaptcha(); // 超时后强制用户重新刷新验证码
+                        }
+                    }, 1000);
+                } else {
+                    err.innerText = '⛔ ' + (data.detail || "验证失败");
+                    err.style.color = '#ff4683';
+                    btn.disabled = false;
+                    loadCaptcha(); // 后端拦截（如图形码错误）后强制刷新
+                }
+            } catch (e) {
+                err.innerText = '⛔ 网络请求失败';
+                err.style.color = '#ff4683';
+                btn.disabled = false;
+            }
+        }
+
+        // ======= 修改后的登录逻辑 =======
+        async function attemptLogin() {
+            const u = document.getElementById('username').value;
+            const sms = document.getElementById('sms-code').value;
+            const err = document.getElementById('login-error');
+
+            if (!u || !sms) { err.innerText = "⛔ 请输入账号和短信验证码！"; return; }
+            err.innerText = "正在验证最终权限...";
+
+            try {
+                const res = await fetch("http://127.0.0.1:8000/login/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    // 注意：现在我们只传账号和短信验证码给后端
+                    body: JSON.stringify({ username: u, sms_code: sms }) 
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem("system_auth", "true");
+                    localStorage.setItem("system_role", data.role);
+                    localStorage.setItem("system_username", data.username);
+                    
+                    err.style.color = "#00eaff";
+                    err.innerText = "✅ 授权成功，正在初始化中枢...";
+                    
+                    setTimeout(() => {
+                        if (data.role === "dev" || data.role === "admin" || data.role === "root") {
+                            window.location.href = 'admin.html';
+                        } else if (data.role === "screen") {
+                            window.location.href = 'screen.html';
+                        } else {
+                            window.location.href = 'admin.html'; 
+                        }
+                    }, 800);
+                } else {
+                    const data = await res.json();
+                    err.innerText = "⛔ " + (data.detail || "验证码错误！");
+                    err.style.color = '#ff4683';
+                }
+            } catch (e) {
+                err.innerText = "⛔ 无法连接到认证服务器！";
+            }
         }
 
         // 发送验证码倒计时逻辑
@@ -185,16 +321,18 @@
                     
                     err.style.color = "#00eaff";
                     err.innerText = "✅ 授权成功，正在初始化中枢...";
-                    
                     setTimeout(() => {
-                        if (data.role === "dev" || data.role === "admin" || data.role === "root") {
-                            window.location.href = 'admin.html';
-                        } else if (data.role === "screen") {
-                            window.location.href = 'screen.html';
-                        } else {
-                            window.location.href = 'admin.html'; 
-                        }
-                    }, 800);
+                    
+                    if (data.role === "dev" || data.role === "root") {
+                        window.location.href = 'http://127.0.0.1:8501/?auth_token=dev_granted';
+                    } else if (data.role === "admin") {
+                        window.location.href = 'admin.html';
+                    } else if (data.role === "screen") {
+                        window.location.href = 'screen.html';
+                    } else {
+                        window.location.href = 'admin.html'; 
+                    }
+                }, 800);
                 } else {
                     err.innerText = "⛔ 账号或密码错误！";
                 }

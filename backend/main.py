@@ -10,9 +10,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import crud, models, database
 from typing import List, Optional
 import random
-
+import uuid
+import string
+import base64
+from captcha.image import ImageCaptcha
+from fastapi.responses import JSONResponse
 app = FastAPI(title="AI-Parking 智能停车系统 API")
 
+# ====== 全局变量：临时存储验证码 ======
+# 实际生产环境中，请将这些存入 Redis 并设置过期时间
+mock_verification_codes = {} # 用于找回密码
+mock_captchas = {}           # 用于暂存图形验证码: {captcha_id: captcha_text}
+mock_login_sms_codes = {}    # 用于暂存登录短信验证码: {username: sms_code}
 # ====== 【新增】CORS 跨域配置 ======
 app.add_middleware(
     CORSMiddleware,
@@ -158,31 +167,82 @@ def forgot_password(req: ForgotPasswordReq, db: Session = Depends(get_db)):
     del mock_verification_codes[req.phone]
     return {"message": "Password reset successfully"}
 
-# ====== 唯一的、清理后的登录接口 ======
-class LoginReq(BaseModel):
+# =========================================================
+#                    【新增】安全登录核心逻辑
+# =========================================================
+
+@app.get("/get_captcha/")
+def get_captcha():
+    """1. 生成图形验证码并返回 Base64 图片"""
+    image = ImageCaptcha(width=120, height=42)
+    # 随机生成 4 位数字字母组合
+    captcha_text = ''.join(random.choices(string.digits, k=4))
+    data = image.generate(captcha_text)
+    base64_img = base64.b64encode(data.getvalue()).decode('utf-8')
+    
+    # 生成唯一 ID 以追踪此验证码
+    captcha_id = str(uuid.uuid4())
+    mock_captchas[captcha_id] = captcha_text
+    
+    return {"captcha_id": captcha_id, "image": f"data:image/png;base64,{base64_img}"}
+
+class SendLoginSmsReq(BaseModel):
     username: str
     password: str
+    captcha_id: str
+    captcha_text: str
+
+@app.post("/send_login_sms/")
+def send_login_sms(req: SendLoginSmsReq, db: Session = Depends(get_db)):
+    """2. 校验账号密码及图形验证码，通过后发送短信"""
+    # [校验一]：检查图形验证码
+    if req.captcha_id not in mock_captchas or mock_captchas[req.captcha_id] != req.captcha_text:
+        raise HTTPException(status_code=400, detail="图形验证码错误或已过期")
+    # 用完即焚，防止重复使用
+    del mock_captchas[req.captcha_id]
+
+    # [校验二]：检查账号和密码
+    phone = None
+    if req.username == "root" and req.password == "12345678":
+        phone = "13800000000" # 假设的 root 手机号，方便演示
+    else:
+        user = db.query(models.SystemUser).filter(
+            models.SystemUser.username == req.username,
+            models.SystemUser.password == req.password
+        ).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="账号或密码错误")
+        if not user.phone:
+            raise HTTPException(status_code=400, detail="该账号未绑定手机号，无法接收验证码")
+        phone = user.phone
+
+    # [执行发送]：生成并下发短信验证码
+    code = str(random.randint(100000, 999999))
+    mock_login_sms_codes[req.username] = code
+    print(f"【模拟登录短信】发送给 {req.username} (手机: {phone}) 的验证码是: {code}")
+    
+    # 安全起见，只返回脱敏的手机号给前端显示
+    masked_phone = phone[:3] + "****" + phone[-4:]
+    return {"message": "短信发送成功", "phone": masked_phone, "mock_code": code}
+
+class LoginReq(BaseModel):
+    username: str
+    sms_code: str  # 不再传密码，改传短信验证码
 
 @app.post("/login/")
 def login(req: LoginReq, db: Session = Depends(get_db)):
-    # 1. 拦截检查：设置 root 账号和 12345678 密码，强制返回 dev 角色
-    if req.username == "root" and req.password == "12345678":
-        return {
-            "message": "Login successful", 
-            "role": "dev", 
-            "username": "root", 
-            "phone": None
-        }
+    """3. 最终登录校验：核对短信验证码"""
+    if req.username not in mock_login_sms_codes or mock_login_sms_codes[req.username] != req.sms_code:
+        raise HTTPException(status_code=401, detail="短信验证码错误或已过期")
+    
+    # 验证成功，清理验证码缓存
+    del mock_login_sms_codes[req.username]
 
-    # 2. 普通用户的真实数据库校验逻辑
-    user = db.query(models.SystemUser).filter(
-        models.SystemUser.username == req.username,
-        models.SystemUser.password == req.password
-    ).first()
-    
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid username or password")
-    
+    # 颁发登录凭证
+    if req.username == "root":
+        return {"message": "Login successful", "role": "dev", "username": "root", "phone": "13800000000"}
+
+    user = db.query(models.SystemUser).filter(models.SystemUser.username == req.username).first()
     return {
         "message": "Login successful", 
         "role": user.role, 
