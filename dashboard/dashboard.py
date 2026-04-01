@@ -45,7 +45,6 @@ menu = st.sidebar.radio("📌 请选择控制台功能", ["🧠 AI 模型深度�
 # ====== 🌟 第一部分核心修改：新增业务系统跳转栏 ======
 st.sidebar.markdown("---")
 st.sidebar.subheader("🌐 业务系统快速通道")
-st.sidebar.caption("点击下方按钮跳转至前端交互页面：")
 
 # 使用 HTML/CSS 渲染科技感跳转按钮 (端口与你本地 Live Server 一致)
 st.sidebar.markdown("""

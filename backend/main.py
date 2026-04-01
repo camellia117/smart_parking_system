@@ -15,6 +15,8 @@ import string
 import base64
 from captcha.image import ImageCaptcha
 from fastapi.responses import JSONResponse
+import google.generativeai as genai
+from pydantic import BaseModel
 
 app = FastAPI(title="AI-Parking 智能停车系统 API")
 
@@ -42,10 +44,6 @@ def root():
 def records():
     return get_all_records()
 
-@app.get("/lots")  
-def lots():
-    return get_all_lots()
-
 @app.get("/statistics")
 def stats():
     return statistics()
@@ -60,9 +58,69 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# =========================================================
+#             【新增】车场与计费规则管理 (ParkingLot 表)
+# =========================================================
+class LotCreate(BaseModel):
+    name: str
+    location: str
+    total_spaces: int
+    price_per_hour: float
+
+class LotUpdate(BaseModel):
+    price_per_hour: float
+    total_spaces: int
+
+@app.get("/lots")  
+def lots(db: Session = Depends(get_db)):
+    """获取所有停车场及其计费信息"""
+    return db.query(models.ParkingLot).order_by(models.ParkingLot.id.desc()).all()
+
+@app.post("/lots")
+def create_lot(lot: LotCreate, db: Session = Depends(get_db)):
+    """新增一个停车场"""
+    new_lot = models.ParkingLot(
+        name=lot.name, 
+        location=lot.location, 
+        total_spaces=lot.total_spaces, 
+        price_per_hour=lot.price_per_hour,
+        available_spaces=lot.total_spaces  # 初始空余车位等于总车位
+    )
+    db.add(new_lot)
+    db.commit()
+    db.refresh(new_lot)
+    return new_lot
+
+@app.put("/lots/{lot_id}")
+def update_lot(lot_id: int, lot_data: LotUpdate, db: Session = Depends(get_db)):
+    """动态修改计费规则和总车位数"""
+    lot = db.query(models.ParkingLot).filter(models.ParkingLot.id == lot_id).first()
+    if not lot:
+        raise HTTPException(status_code=404, detail="未找到该车场")
+    
+    # 计算车位差值，同步更新剩余可用车位
+    diff = lot_data.total_spaces - lot.total_spaces
+    lot.total_spaces = lot_data.total_spaces
+    lot.available_spaces = max(0, lot.available_spaces + diff)
+    
+    lot.price_per_hour = lot_data.price_per_hour
+    db.commit()
+    return {"message": "车场配置更新成功"}
+
+@app.delete("/lots/{lot_id}")
+def delete_lot(lot_id: int, db: Session = Depends(get_db)):
+    """下线并删除车场"""
+    lot = db.query(models.ParkingLot).filter(models.ParkingLot.id == lot_id).first()
+    if not lot:
+        raise HTTPException(status_code=404, detail="未找到该车场")
+    db.delete(lot)
+    db.commit()
+    return {"message": "车场已成功下线"}
+
     
 # =========================================================
-#             【新增】客户与白名单车辆管理 (User 表)
+#             客户与白名单车辆管理 (User 表)
 # =========================================================
 class CarOwnerCreate(BaseModel):
     username: str
@@ -71,16 +129,12 @@ class CarOwnerCreate(BaseModel):
 
 @app.get("/car_owners/")
 def get_car_owners(db: Session = Depends(get_db)):
-    """获取所有已登记的车主和车辆信息"""
     return db.query(models.User).order_by(models.User.id.desc()).all()
 
 @app.post("/car_owners/")
 def create_car_owner(owner: CarOwnerCreate, db: Session = Depends(get_db)):
-    """新增白名单/月租车辆"""
-    # 检查车牌是否已经登记过
     if db.query(models.User).filter(models.User.car_number == owner.car_number).first():
         raise HTTPException(status_code=400, detail="该车牌号已存在，请勿重复登记")
-    
     new_owner = models.User(username=owner.username, car_number=owner.car_number, phone=owner.phone)
     db.add(new_owner)
     db.commit()
@@ -89,7 +143,6 @@ def create_car_owner(owner: CarOwnerCreate, db: Session = Depends(get_db)):
 
 @app.delete("/car_owners/{owner_id}")
 def delete_car_owner(owner_id: int, db: Session = Depends(get_db)):
-    """移除车主信息"""
     owner = db.query(models.User).filter(models.User.id == owner_id).first()
     if not owner:
         raise HTTPException(status_code=404, detail="未找到该车主记录")
@@ -261,3 +314,35 @@ def login(req: LoginReq, db: Session = Depends(get_db)):
         "username": user.username, 
         "phone": user.phone
     }
+
+
+# 1. 配置 API Key
+GEMINI_API_KEY = "AIzaSyAbD0drnrMc6ZWZtKcT90kjyTXRsizg3cI"
+genai.configure(api_key=GEMINI_API_KEY)
+
+# 2. 初始化模型 (推荐使用 1.5-flash，速度最快且适合毕设)
+gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+
+# 3. 定义请求模型
+class AIAdviceRequest(BaseModel):
+    peak_hour: int      # 预测的高峰时段
+    max_volume: int     # 预测的最高车辆数
+
+# 4. 编写真实的 AI 决策接口
+@app.post("/ai_advice")
+async def get_gemini_advice(req: AIAdviceRequest):
+    try:
+        #  Prompt (提示词)
+        prompt = (
+            f"你是一个智慧停车系统的 AI 运营专家。当前系统预测到在 {req.peak_hour}:00 "
+            f"将达到车流顶峰（预计 {req.max_volume} 辆车）。请给出一段专业、简洁的运营建议 "
+            f"（80字以内），包含调价建议和车辆分流方案。直接输出内容，不要寒暄。"
+        )
+        
+        # 真正向云端请求回答
+        response = gemini_model.generate_content(prompt)
+        
+        return {"advice": response.text}
+    except Exception as e:
+        # 容错处理：如果网络不通，返回预设的专家规则
+        return {"advice": "系统检测到车流激增，建议立即启动动态调价机制，并在入口大屏显示周边停车场剩余车位，引导非月租车辆错峰入场。"}

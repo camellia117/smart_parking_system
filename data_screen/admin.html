@@ -55,12 +55,15 @@
 
         /* --- 控制台 & 表格样式 --- */
         .control-panel { background: rgba(20, 30, 50, 0.6); border: 1px solid rgba(0, 234, 255, 0.2); border-radius: 10px; padding: 20px; margin-bottom: 25px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;}
-        .control-input { background: rgba(0,0,0,0.5); border: 1px solid #333; color: #fff; padding: 10px 15px; border-radius: 5px; outline: none; flex: 1; min-width: 180px; transition: 0.3s; }
+        .control-input { background: rgba(0,0,0,0.5); border: 1px solid #333; color: #fff; padding: 10px 15px; border-radius: 5px; outline: none; flex: 1; min-width: 140px; transition: 0.3s; }
         .control-input:focus { border-color: #00eaff; box-shadow: 0 0 10px rgba(0,234,255,0.2); }
         .btn-action { background: linear-gradient(90deg, #008cff, #00eaff); color: #000; font-weight: bold; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; transition: 0.3s; white-space: nowrap;}
         .btn-action:hover { box-shadow: 0 0 15px rgba(0,234,255,0.4); transform: translateY(-2px); }
+        
         .btn-danger { background: linear-gradient(90deg, #ff4683, #ff6b6b); color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; transition: 0.3s; font-size: 13px;}
         .btn-danger:hover { box-shadow: 0 0 10px rgba(255,70,131,0.5); }
+        .btn-edit { background: linear-gradient(90deg, #ffeb7b, #f39c12); color: #000; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; transition: 0.3s; font-size: 13px; font-weight: bold;}
+        .btn-edit:hover { box-shadow: 0 0 10px rgba(243,156,18,0.5); }
 
         .data-table { width: 100%; border-collapse: collapse; background: var(--panel-bg); border-radius: 10px; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.5); backdrop-filter: blur(5px);}
         .data-table th, .data-table td { padding: 15px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); }
@@ -96,15 +99,16 @@
             <div class="nav-item" onclick="switchPage('page-users', this)">
                 <i class="fa-solid fa-address-card"></i> 月租与白名单管理
             </div>
+            <div class="nav-item" onclick="switchPage('page-lots', this)">
+                <i class="fa-solid fa-building-flag"></i> 车场与计费配置
+            </div>
             <div class="nav-item" onclick="switchPage('page-finance', this)">
                 <i class="fa-solid fa-robot"></i> AI预测与财务分析
             </div>
             <div class="nav-item" onclick="window.open('screen.html', '_blank')">
                 <i class="fa-solid fa-display"></i> AI 监控大屏 <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 12px; margin-left: auto;"></i>
             </div>
-            <div class="nav-item" onclick="window.open('http://127.0.0.1:8501?auth_token=dev_granted', '_blank')" style="color: #00ff88; margin-top: auto;">
-                <i class="fa-solid fa-code"></i> 开发者 Dashboard <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 12px; margin-left: auto;"></i>
-            </div>
+            
         </div>
 
         <div class="main-content">
@@ -183,33 +187,88 @@
                     </tbody>
                 </table>
             </div>
+
+            <div id="page-lots" class="page">
+                <div class="page-header">
+                    <h2><i class="fa-solid fa-building-flag"></i> 停车场网络与计费规则配置</h2>
+                    <button class="btn-action" onclick="loadLots()"><i class="fa-solid fa-rotate-right"></i> 同步车场数据</button>
+                </div>
+                
+                <div class="control-panel">
+                    <div style="flex: 100%; color: #8cb6f5; font-weight: bold; margin-bottom: 5px;"><i class="fa-solid fa-square-plus"></i> 新建运营停车场</div>
+                    <input type="text" id="lot-name" class="control-input" placeholder="停车场名称 (如: A区地下车库)">
+                    <input type="text" id="lot-location" class="control-input" placeholder="物理位置">
+                    <input type="number" id="lot-spaces" class="control-input" placeholder="规划总车位数" style="max-width: 120px;">
+                    <input type="number" id="lot-price" class="control-input" placeholder="费率 (元/小时)" style="max-width: 120px;" step="0.5">
+                    <button class="btn-action" onclick="addLot()"><i class="fa-solid fa-cloud-arrow-up"></i> 部署新车场</button>
+                </div>
+
+                <table class="data-table" id="lot-table">
+                    <thead>
+                        <tr>
+                            <th>车场编号</th>
+                            <th>车场名称</th>
+                            <th>物理位置</th>
+                            <th>车位容量 (空余/总数)</th>
+                            <th>当前费率</th>
+                            <th>系统操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lots-tbody">
+                        <tr><td colspan="6" style="text-align: center; color: #aaa;">正在拉取车场数据...</td></tr>
+                    </tbody>
+                </table>
+            </div>
             
             <div id="page-finance" class="page">
                 <div class="page-header">
-                    <h2><i class="fa-solid fa-chart-line"></i> 财务报表与模型洞察</h2>
+                    <h2><i class="fa-solid fa-brain"></i> AI 智能预测与营收洞察</h2>
+                    <button class="btn-action" onclick="loadAIAndFinance()"><i class="fa-solid fa-rotate-right"></i> 重新运行大模型</button>
                 </div>
                 
-                <h3 style="color: #8cb6f5; border-left: 4px solid #00eaff; padding-left: 10px;">Veo 停车需求预测模型状态</h3>
+                <h3 style="color: #8cb6f5; border-left: 4px solid #00eaff; padding-left: 10px;">平台实时运营核心指标 (基于业务流演算)</h3>
                 <div class="metric-cards">
                     <div class="m-card">
-                        <div class="m-title">🤖 模型版本</div>
-                        <div class="m-value">v2.4.1</div>
-                        <div class="m-sub">XGBoost 引擎驱动</div>
+                        <div class="m-title">💰 平台总计营收</div>
+                        <div class="m-value" id="stat-revenue" style="color: #ffeb7b;">¥ 0.00</div>
+                        <div class="m-sub">基于结算订单聚合演算</div>
                     </div>
                     <div class="m-card">
-                        <div class="m-title">🎯 最新 R² 得分</div>
-                        <div class="m-value" style="color: #00ff88;">0.92</div>
-                        <div class="m-sub">拟合度极佳</div>
+                        <div class="m-title">⏱️ 平均滞留偏好时长</div>
+                        <div class="m-value" id="stat-duration" style="color: #00ff88;">0.00 h</div>
+                        <div class="m-sub">车辆平均在场生命周期</div>
                     </div>
                     <div class="m-card">
-                        <div class="m-title">⏳ 下次重训时间</div>
-                        <div class="m-value" style="color: #ffeb7b;">03:00</div>
-                        <div class="m-sub">今晚自动执行</div>
+                        <div class="m-title">🚗 累计吞吐车次</div>
+                        <div class="m-value" id="stat-records" style="color: #00eaff;">0</div>
+                        <div class="m-sub">总计服务出入场车辆</div>
                     </div>
                 </div>
 
-                <h3 style="color: #8cb6f5; border-left: 4px solid #00eaff; padding-left: 10px; margin-top: 40px;">💰 近7天收益趋势分析</h3>
-                <div class="chart-container" id="financeChart"></div>
+                <div style="display: flex; gap: 20px; margin-top: 40px;">
+                    <div style="flex: 7;">
+                        <h3 style="color: #8cb6f5; border-left: 4px solid #00eaff; padding-left: 10px;">🧠 AI 模型：未来 24 小时潮汐车流预测</h3>
+                        <div class="chart-container" id="aiPredictChart"></div>
+                    </div>
+                    
+                    <div style="flex: 3;">
+                        <h3 style="color: #8cb6f5; border-left: 4px solid #ff4683; padding-left: 10px;">💡 AI 辅助决策中枢</h3>
+                        <div class="control-panel" style="flex-direction: column; align-items: flex-start; height: 400px; margin-bottom: 0;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; width: 100%; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+                                <i class="fa-solid fa-robot" style="font-size: 24px; color: #ffeb7b;"></i>
+                                <span style="font-weight: bold; font-size: 18px; color: #ffeb7b;">运营干预建议</span>
+                            </div>
+                            
+                            <div id="ai-advice-content" style="color: #ddd; line-height: 1.8; font-size: 14px;">
+                                正在等待 AI 引擎计算分析结果...
+                            </div>
+
+                            <button class="btn-action" style="margin-top: auto; width: 100%; background: linear-gradient(90deg, #ff4683, #ff6b6b); color: white;" onclick="alert('指令已下发至分布式节点，开始执行智能分流推荐策略！')">
+                                <i class="fa-solid fa-satellite-dish"></i> 一键执行动态调价与推荐分流
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -227,8 +286,9 @@
             document.getElementById(pageId).classList.add('active');
 
             if(pageId === 'page-records') loadRecords();
-            if(pageId === 'page-users') loadCarOwners(); // 【修改点 3：切换时加载车主】
-            if(pageId === 'page-finance') initFinanceChart(); 
+            if(pageId === 'page-users') loadCarOwners(); 
+            if(pageId === 'page-lots') loadLots(); 
+            if(pageId === 'page-finance') loadAIAndFinance();
         }
 
         // --- 车位地图渲染 ---
@@ -261,7 +321,7 @@
             const gate = document.getElementById('manual-gate').value;
             if(!plate) { alert("⚠️ 请先输入需要放行的车牌号！"); return; }
             
-            const btn = document.querySelector('.control-panel .btn-action');
+            const btn = document.querySelector('#page-records .btn-action');
             const originalText = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 指令下发中...';
             
@@ -327,25 +387,18 @@
             renderTable(filtered.slice(0, 50));
         }
 
-        // ==============================================================
-        // 【修改点 4：新增车主与白名单管理的核心 JS 逻辑】
-        // ==============================================================
-        
-        // 拉取车主数据
+        // --- 车主与白名单管理逻辑 ---
         async function loadCarOwners() {
             const tbody = document.getElementById('owners-tbody');
             tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #00eaff;"><i class="fa-solid fa-spinner fa-spin"></i> 正在拉取车主数据...</td></tr>';
-            
             try {
                 const response = await fetch(`${API_BASE}/car_owners/`);
                 const owners = await response.json();
                 tbody.innerHTML = '';
-                
                 if (owners.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #aaa;">暂无车辆数据</td></tr>';
                     return;
                 }
-
                 owners.forEach(owner => {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
@@ -361,124 +414,289 @@
                     `;
                     tbody.appendChild(tr);
                 });
-            } catch (error) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #ff4683;"><i class="fa-solid fa-triangle-exclamation"></i> 连接后端API失败。</td></tr>`;
-            }
+            } catch (error) { tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #ff4683;">连接后端API失败。</td></tr>`; }
         }
 
-        // 提交新增车主
         async function addCarOwner() {
             const username = document.getElementById('owner-name').value.trim();
             const car_number = document.getElementById('owner-car').value.trim();
             const phone = document.getElementById('owner-phone').value.trim();
 
-            if (!username || !car_number || !phone) {
-                alert("⚠️ 请完整填写车主姓名、车牌号和手机号！");
-                return;
-            }
-
+            if (!username || !car_number || !phone) { alert("⚠️ 请完整填写车主信息！"); return; }
             try {
                 const response = await fetch(`${API_BASE}/car_owners/`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, car_number, phone })
                 });
-
                 if (response.ok) {
-                    alert("✅ 白名单车辆录入成功！");
-                    // 清空输入框并刷新列表
+                    alert("✅ 白名单录入成功！");
                     document.getElementById('owner-name').value = '';
                     document.getElementById('owner-car').value = '';
                     document.getElementById('owner-phone').value = '';
                     loadCarOwners();
                 } else {
-                    const errorData = await response.json();
-                    alert(`❌ 录入失败: ${errorData.detail}`);
+                    const errorData = await response.json(); alert(`❌ 录入失败: ${errorData.detail}`);
                 }
+            } catch (error) { alert("❌ 请求发送失败。"); }
+        }
+
+        async function deleteCarOwner(id, carNumber) {
+            if (!confirm(`⚠️ 确定移除【${carNumber}】的白名单资质吗？`)) return;
+            try {
+                const response = await fetch(`${API_BASE}/car_owners/${id}`, { method: 'DELETE' });
+                if (response.ok) loadCarOwners();
+                else alert("❌ 移除失败。");
+            } catch (error) { alert("❌ 请求失败。"); }
+        }
+
+
+        // ==============================================================
+        // 【新增功能核心逻辑：车场与计费规则配置】
+        // ==============================================================
+        async function loadLots() {
+            const tbody = document.getElementById('lots-tbody');
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #00eaff;"><i class="fa-solid fa-spinner fa-spin"></i> 正在拉取车场结构...</td></tr>';
+            try {
+                const response = await fetch(`${API_BASE}/lots`);
+                const lots = await response.json();
+                tbody.innerHTML = '';
+                
+                if (lots.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #aaa;">系统内暂无配置任何停车场，请先添加</td></tr>';
+                    return;
+                }
+
+                lots.forEach(lot => {
+                    const tr = document.createElement('tr');
+                    const availColor = lot.available_spaces < 10 ? '#ff4683' : '#00ff88';
+                    tr.innerHTML = `
+                        <td style="color: #8cb6f5;">#LOT-${lot.id}</td>
+                        <td style="font-weight: bold; font-size: 15px;">${lot.name}</td>
+                        <td>${lot.location}</td>
+                        <td><span style="color: ${availColor}; font-weight: bold; font-size: 16px;">${lot.available_spaces}</span> <span style="color:#aaa;">/ ${lot.total_spaces}</span></td>
+                        <td style="color: #ffeb7b; font-weight: bold; font-size: 15px;">¥ ${lot.price_per_hour} / 时</td>
+                        <td>
+                            <button class="btn-edit" onclick="updateLotConfig(${lot.id}, ${lot.total_spaces}, ${lot.price_per_hour}, '${lot.name}')">
+                                <i class="fa-solid fa-pen-to-square"></i> 改配
+                            </button>
+                            <button class="btn-danger" style="margin-left: 5px;" onclick="deleteLot(${lot.id}, '${lot.name}')">
+                                <i class="fa-solid fa-trash"></i> 下线
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
             } catch (error) {
-                alert("❌ 请求发送失败，请检查后端是否运行。");
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #ff4683;"><i class="fa-solid fa-triangle-exclamation"></i> 无法连接到后端获取车场数据</td></tr>`;
             }
         }
 
-        // 删除车主
-        async function deleteCarOwner(id, carNumber) {
-            if (!confirm(`⚠️ 危险操作：您确定要移除车牌号为【${carNumber}】的白名单资质吗？\n移除后该车辆入场将正常计费。`)) {
+        async function addLot() {
+            const name = document.getElementById('lot-name').value.trim();
+            const location = document.getElementById('lot-location').value.trim();
+            const total_spaces = parseInt(document.getElementById('lot-spaces').value);
+            const price_per_hour = parseFloat(document.getElementById('lot-price').value);
+
+            if (!name || !location || isNaN(total_spaces) || isNaN(price_per_hour)) {
+                alert("⚠️ 请确保车场名称、位置、总车位和费率都已正确填写！");
                 return;
             }
 
             try {
-                const response = await fetch(`${API_BASE}/car_owners/${id}`, {
-                    method: 'DELETE'
+                const response = await fetch(`${API_BASE}/lots`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, location, total_spaces, price_per_hour })
                 });
 
                 if (response.ok) {
-                    loadCarOwners(); // 刷新列表
+                    alert("✅ 新停车场部署上线成功！");
+                    document.getElementById('lot-name').value = '';
+                    document.getElementById('lot-location').value = '';
+                    document.getElementById('lot-spaces').value = '';
+                    document.getElementById('lot-price').value = '';
+                    loadLots(); // 刷新列表
                 } else {
-                    alert("❌ 移除失败。");
+                    alert("❌ 部署失败，请检查后端报错。");
                 }
             } catch (error) {
-                alert("❌ 请求发送失败，请检查后端是否运行。");
+                alert("❌ 请求发送失败。");
             }
+        }
+
+        async function updateLotConfig(id, oldSpaces, oldPrice, lotName) {
+            // 使用原生的 prompt 弹窗让管理员快速修改（简单高效）
+            const newPriceStr = prompt(`【${lotName}】正在进行费率配置更改。\n请输入新的计费标准 (元/小时)：`, oldPrice);
+            if (newPriceStr === null) return; // 用户点击取消
+            
+            const newSpacesStr = prompt(`【${lotName}】正在进行物理容量规划。\n请输入最新的总规划车位数：`, oldSpaces);
+            if (newSpacesStr === null) return;
+
+            const price_per_hour = parseFloat(newPriceStr);
+            const total_spaces = parseInt(newSpacesStr);
+
+            if (isNaN(price_per_hour) || isNaN(total_spaces) || price_per_hour < 0 || total_spaces < 1) {
+                alert("⚠️ 输入的数值不合法，请重新操作。");
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/lots/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ price_per_hour, total_spaces })
+                });
+                
+                if (response.ok) {
+                    loadLots(); // 刷新 UI
+                } else {
+                    alert("❌ 规则修改失败。");
+                }
+            } catch (error) { alert("❌ 请求失败。"); }
+        }
+
+        async function deleteLot(id, lotName) {
+            if (!confirm(`💣 极度危险操作：您确定要下线并删除【${lotName}】的所有配置吗？\n此操作不可逆，将影响该车场的所有相关业务！`)) {
+                return;
+            }
+            try {
+                const response = await fetch(`${API_BASE}/lots/${id}`, { method: 'DELETE' });
+                if (response.ok) loadLots();
+                else alert("❌ 下线失败。");
+            } catch (error) { alert("❌ 请求失败。"); }
         }
         // ==============================================================
+        // 【全新智能功能核心：AI 预测与数据演算分析】
+        // ==============================================================
+        let aiPredictChartInstance = null;
 
+        async function loadAIAndFinance() {
+            // 1. 获取并渲染实时统计演算数据 (调用 analytics.py)
+            try {
+                const statsRes = await fetch(`${API_BASE}/statistics`);
+                const stats = await statsRes.json();
+                
+                document.getElementById('stat-revenue').innerText = `¥ ${stats.total_revenue.toFixed(2)}`;
+                document.getElementById('stat-duration').innerText = `${stats.avg_parking_time.toFixed(2)} h`;
+                document.getElementById('stat-records').innerText = stats.records;
+            } catch (error) {
+                console.error("统计数据拉取失败", error);
+            }
 
-        // --- 财务报表 ECharts 渲染 ---
-        let financeChartInstance = null;
-        function initFinanceChart() {
-            const chartDom = document.getElementById('financeChart');
+            // 2. 获取并渲染 AI 未来 24 小时预测数据 (调用 predict.py)
+            try {
+                const predRes = await fetch(`${API_BASE}/predict`);
+                const predictions = await predRes.json();
+                
+                // 解析数据
+                const hours = predictions.map(p => `${p.hour}:00`);
+                const carVolumes = predictions.map(p => p.predicted_cars);
+
+                // 寻找预测峰值（用于生成 AI 建议）
+                let maxVolume = -1;
+                let peakHour = 0;
+                predictions.forEach(p => {
+                    if(p.predicted_cars > maxVolume) {
+                        maxVolume = p.predicted_cars;
+                        peakHour = p.hour;
+                    }
+                });
+
+                renderAIPredictChart(hours, carVolumes);
+                generateAIAdvice(peakHour, maxVolume);
+
+            } catch (error) {
+                console.error("AI 预测模型调用失败", error);
+                document.getElementById('ai-advice-content').innerHTML = '<span style="color:#ff4683;">模型服务调用失败，请检查 AI 引擎状态。</span>';
+            }
+        }
+
+        function renderAIPredictChart(hours, data) {
+            const chartDom = document.getElementById('aiPredictChart');
             if(!chartDom) return;
-            
-            if(!financeChartInstance) {
-                financeChartInstance = echarts.init(chartDom);
-            }
-            
-            const dates = [];
-            for(let i=6; i>=0; i--) {
-                let d = new Date();
-                d.setDate(d.getDate() - i);
-                dates.push(`${d.getMonth()+1}-${d.getDate()}`);
-            }
-            const revenues = [1200, 1500, 1100, 1800, 2200, 3100, 2800];
+            if(!aiPredictChartInstance) aiPredictChartInstance = echarts.init(chartDom);
 
             const option = {
-                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                tooltip: { trigger: 'axis', axisPointer: { type: 'cross', label: { backgroundColor: '#6a7985' } } },
                 grid: { left: '3%', right: '4%', bottom: '5%', top: '10%', containLabel: true },
-                xAxis: { 
-                    type: 'category', 
-                    data: dates, 
-                    axisLabel: { color: '#8cb6f5' },
-                    axisLine: { lineStyle: { color: 'rgba(0, 234, 255, 0.2)' } }
-                },
-                yAxis: { 
-                    type: 'value', 
-                    name: '收益 (元)', 
-                    nameTextStyle: { color: '#8cb6f5' },
-                    axisLabel: { color: '#8cb6f5' },
-                    splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }
-                },
-                series: [{
-                    name: '日收益',
-                    type: 'bar',
-                    barWidth: '40%',
-                    data: revenues,
-                    itemStyle: {
-                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                            { offset: 0, color: '#00eaff' },
-                            { offset: 1, color: '#008cff' }
-                        ]),
-                        borderRadius: [5, 5, 0, 0]
-                    },
-                    label: {
-                        show: true,
-                        position: 'top',
-                        color: '#fff',
-                        formatter: '¥{c}'
+                xAxis: [
+                    { 
+                        type: 'category', 
+                        boundaryGap: false, 
+                        data: hours,
+                        axisLabel: { color: '#8cb6f5' },
+                        axisLine: { lineStyle: { color: 'rgba(0, 234, 255, 0.2)' } }
                     }
-                }]
+                ],
+                yAxis: [
+                    { 
+                        type: 'value', 
+                        name: '预测停车需求 (辆)',
+                        nameTextStyle: { color: '#8cb6f5' },
+                        axisLabel: { color: '#8cb6f5' },
+                        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }
+                    }
+                ],
+                series: [
+                    {
+                        name: 'AI 预测需求',
+                        type: 'line',
+                        smooth: true,
+                        lineStyle: { width: 3, color: '#00eaff' },
+                        showSymbol: false,
+                        areaStyle: {
+                            opacity: 0.8,
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(0, 234, 255, 0.5)' },
+                                { offset: 1, color: 'rgba(0, 234, 255, 0.01)' }
+                            ])
+                        },
+                        emphasis: { focus: 'series' },
+                        data: data,
+                        markPoint: {
+                            data: [ { type: 'max', name: '预测峰值' } ],
+                            itemStyle: { color: '#ff4683' }
+                        }
+                    }
+                ]
             };
-            financeChartInstance.setOption(option);
+            aiPredictChartInstance.setOption(option);
         }
+
+        async function generateAIAdvice(peakHour, maxVolume) {
+    const contentDom = document.getElementById('ai-advice-content');
+    
+    // 展示加载动画，让界面看起来更专业
+    contentDom.innerHTML = `
+        <div style="color: #00eaff; text-align:center; padding: 20px;">
+            <i class="fa-solid fa-spinner fa-spin"></i> 正在连线 Gemini 云端大脑进行沙盘推演...
+        </div>
+    `;
+    
+    try {
+        // 请求我们刚才在后端写的 /ai_advice 接口
+        const response = await fetch(`${API_BASE}/ai_advice`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ peak_hour: peakHour, max_volume: maxVolume })
+        });
+        
+        const data = await response.json();
+        
+        // 将我返回的文字渲染到精美的卡片中
+        contentDom.innerHTML = `
+            <div style="padding: 15px; background: rgba(0, 234, 255, 0.05); border-left: 4px solid #00eaff; border-radius: 6px; color: #fff; line-height: 1.6;">
+                <span style="display: block; margin-bottom: 8px; font-size: 12px; color: #00eaff;">
+                    <i class="fa-solid fa-brain"></i> Gemini 智能运营策略：
+                </span>
+                ${data.advice}
+            </div>
+        `;
+    } catch (error) {
+        contentDom.innerHTML = '<span style="color: #ff4683;">⚠️ AI 决策模块暂时离线，请检查网络连接。</span>';
+    }
+}
+        window.addEventListener('resize', () => { if(aiPredictChartInstance) aiPredictChartInstance.resize(); });
 
         window.addEventListener('resize', () => {
             if(financeChartInstance) financeChartInstance.resize();
