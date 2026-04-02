@@ -15,10 +15,7 @@ import string
 import base64
 from captcha.image import ImageCaptcha
 from fastapi.responses import JSONResponse
-import os # 新增 os 库用于配置代理
-
-# 引入 Gemini 的官方库
-import google.generativeai as genai
+import os 
 
 app = FastAPI(title="AI-Parking 智能停车系统 API")
 
@@ -285,13 +282,15 @@ def login(req: LoginReq, db: Session = Depends(get_db)):
 #             🌟 终极核心：原生 REST 接入 Gemini 云端大脑
 # =========================================================
 import requests
-# 【核心安全修复 1】：加载根目录下的 .env 文件
-load_dotenv()  # pyright: ignore[reportUndefinedVariable]
+from dotenv import load_dotenv  # 🚨 关键：必须加上这行导入！
 
-# 【核心安全修复 2】：从环境变量中读取密钥，再也不用写死在代码里了！
+# 【核心安全修复 1】：加载根目录下的 .env 文件
+load_dotenv()  
+
+# 【核心安全修复 2】：从环境变量中读取密钥
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-# 【2】强制代理配置 
-# ⚠️ 注意：如果你用的是 Clash，一般是 7890；如果是 v2ray，一般是 10808。请务必核对！
+
+# 【强制代理配置】：请确认 7897 是你的真实端口
 PROXIES = {
     "http": "http://127.0.0.1:7897",
     "https": "http://127.0.0.1:7897"
@@ -316,10 +315,9 @@ def get_gemini_advice(req: AIAdviceRequest):
             "contents": [{"parts": [{"text": prompt}]}]
         }
         
-        # 【神仙级调试参数】：加上 verify=False，无视所有梯子带来的证书拦截问题！
+        # 加上 verify=False，无视所有梯子带来的证书拦截问题！
         response = requests.post(url, json=payload, proxies=PROXIES, timeout=15.0, verify=False)
         
-        # 如果请求失败，让它直接暴露出真实的错误！
         if response.status_code != 200:
             return {"advice": f"🚨 请求被拒绝了！状态码：{response.status_code}。具体原因：{response.text}"}
         
@@ -329,5 +327,4 @@ def get_gemini_advice(req: AIAdviceRequest):
         return {"advice": real_advice}
         
     except Exception as e:
-        # 🚨 终极调试大法：直接把底层报错的英文打在网页上！
         return {"advice": f"🚨 抓到真凶了！底层报错信息是：【{str(e)}】。请直接把这段话发给我！"}
