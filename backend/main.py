@@ -15,8 +15,9 @@ import string
 import base64
 from captcha.image import ImageCaptcha
 from fastapi.responses import JSONResponse
+
+# 引入 Gemini 的官方库
 import google.generativeai as genai
-from pydantic import BaseModel
 
 app = FastAPI(title="AI-Parking 智能停车系统 API")
 
@@ -60,7 +61,7 @@ def get_db():
         db.close()
 
 # =========================================================
-#             【新增】车场与计费规则管理 (ParkingLot 表)
+#             车场与计费规则管理 (ParkingLot 表)
 # =========================================================
 class LotCreate(BaseModel):
     name: str
@@ -74,18 +75,13 @@ class LotUpdate(BaseModel):
 
 @app.get("/lots")  
 def lots(db: Session = Depends(get_db)):
-    """获取所有停车场及其计费信息"""
     return db.query(models.ParkingLot).order_by(models.ParkingLot.id.desc()).all()
 
 @app.post("/lots")
 def create_lot(lot: LotCreate, db: Session = Depends(get_db)):
-    """新增一个停车场"""
     new_lot = models.ParkingLot(
-        name=lot.name, 
-        location=lot.location, 
-        total_spaces=lot.total_spaces, 
-        price_per_hour=lot.price_per_hour,
-        available_spaces=lot.total_spaces  # 初始空余车位等于总车位
+        name=lot.name, location=lot.location, 
+        total_spaces=lot.total_spaces, price_per_hour=lot.price_per_hour, available_spaces=lot.total_spaces
     )
     db.add(new_lot)
     db.commit()
@@ -94,26 +90,19 @@ def create_lot(lot: LotCreate, db: Session = Depends(get_db)):
 
 @app.put("/lots/{lot_id}")
 def update_lot(lot_id: int, lot_data: LotUpdate, db: Session = Depends(get_db)):
-    """动态修改计费规则和总车位数"""
     lot = db.query(models.ParkingLot).filter(models.ParkingLot.id == lot_id).first()
-    if not lot:
-        raise HTTPException(status_code=404, detail="未找到该车场")
-    
-    # 计算车位差值，同步更新剩余可用车位
+    if not lot: raise HTTPException(status_code=404, detail="未找到该车场")
     diff = lot_data.total_spaces - lot.total_spaces
     lot.total_spaces = lot_data.total_spaces
     lot.available_spaces = max(0, lot.available_spaces + diff)
-    
     lot.price_per_hour = lot_data.price_per_hour
     db.commit()
     return {"message": "车场配置更新成功"}
 
 @app.delete("/lots/{lot_id}")
 def delete_lot(lot_id: int, db: Session = Depends(get_db)):
-    """下线并删除车场"""
     lot = db.query(models.ParkingLot).filter(models.ParkingLot.id == lot_id).first()
-    if not lot:
-        raise HTTPException(status_code=404, detail="未找到该车场")
+    if not lot: raise HTTPException(status_code=404, detail="未找到该车场")
     db.delete(lot)
     db.commit()
     return {"message": "车场已成功下线"}
@@ -144,8 +133,7 @@ def create_car_owner(owner: CarOwnerCreate, db: Session = Depends(get_db)):
 @app.delete("/car_owners/{owner_id}")
 def delete_car_owner(owner_id: int, db: Session = Depends(get_db)):
     owner = db.query(models.User).filter(models.User.id == owner_id).first()
-    if not owner:
-        raise HTTPException(status_code=404, detail="未找到该车主记录")
+    if not owner: raise HTTPException(status_code=404, detail="未找到该车主记录")
     db.delete(owner)
     db.commit()
     return {"message": "车辆信息已成功移除"}
@@ -174,12 +162,10 @@ class ForgotPasswordReq(BaseModel):
 @app.post("/system_users/")
 def create_system_user(user: UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(models.SystemUser).filter(models.SystemUser.username == user.username).first()
-    if db_user:
-        raise HTTPException(status_code=400, detail="Username already registered")
+    if db_user: raise HTTPException(status_code=400, detail="Username already registered")
     if user.phone:
          db_phone = db.query(models.SystemUser).filter(models.SystemUser.phone == user.phone).first()
-         if db_phone:
-             raise HTTPException(status_code=400, detail="Phone number already registered")
+         if db_phone: raise HTTPException(status_code=400, detail="Phone number already registered")
 
     new_user = models.SystemUser(username=user.username, password=user.password, role=user.role, phone=user.phone)
     db.add(new_user)
@@ -191,19 +177,14 @@ def create_system_user(user: UserCreate, db: Session = Depends(get_db)):
 def get_system_users(skip: int = 0, limit: int = 100, search: Optional[str] = None, db: Session = Depends(get_db)):
     query = db.query(models.SystemUser)
     if search:
-        query = query.filter(
-            (models.SystemUser.username.contains(search)) |
-            (models.SystemUser.phone.contains(search))
-        )
+        query = query.filter( (models.SystemUser.username.contains(search)) | (models.SystemUser.phone.contains(search)) )
     return query.offset(skip).limit(limit).all()
 
 @app.delete("/system_users/{user_id}")
 def delete_system_user(user_id: int, db: Session = Depends(get_db)):
     user = db.query(models.SystemUser).filter(models.SystemUser.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    if user.role == "root":
-         raise HTTPException(status_code=400, detail="Cannot delete root user")
+    if not user: raise HTTPException(status_code=404, detail="User not found")
+    if user.role == "root": raise HTTPException(status_code=400, detail="Cannot delete root user")
     db.delete(user)
     db.commit()
     return {"message": "User deleted successfully"}
@@ -211,15 +192,11 @@ def delete_system_user(user_id: int, db: Session = Depends(get_db)):
 @app.put("/system_users/")
 def update_system_user(user_data: UserUpdate, db: Session = Depends(get_db)):
     user = db.query(models.SystemUser).filter(models.SystemUser.id == user_data.id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    if user.username != user_data.username:
-        if db.query(models.SystemUser).filter(models.SystemUser.username == user_data.username).first():
-            raise HTTPException(status_code=400, detail="Username already exists")
-    if user.phone != user_data.phone:
-        if db.query(models.SystemUser).filter(models.SystemUser.phone == user_data.phone).first():
-            raise HTTPException(status_code=400, detail="Phone number already exists")
+    if not user: raise HTTPException(status_code=404, detail="User not found")
+    if user.username != user_data.username and db.query(models.SystemUser).filter(models.SystemUser.username == user_data.username).first():
+        raise HTTPException(status_code=400, detail="Username already exists")
+    if user.phone != user_data.phone and db.query(models.SystemUser).filter(models.SystemUser.phone == user_data.phone).first():
+        raise HTTPException(status_code=400, detail="Phone number already exists")
 
     user.username = user_data.username
     user.password = user_data.password
@@ -239,9 +216,7 @@ def forgot_password(req: ForgotPasswordReq, db: Session = Depends(get_db)):
     if req.phone not in mock_verification_codes or mock_verification_codes[req.phone] != req.code:
         raise HTTPException(status_code=400, detail="Invalid verification code")
     user = db.query(models.SystemUser).filter(models.SystemUser.phone == req.phone).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User with this phone not found")
-    
+    if not user: raise HTTPException(status_code=404, detail="User with this phone not found")
     user.password = req.new_password
     db.commit()
     del mock_verification_codes[req.phone]
@@ -277,14 +252,9 @@ def send_login_sms(req: SendLoginSmsReq, db: Session = Depends(get_db)):
     if req.username == "root" and req.password == "12345678":
         phone = "13800000000" 
     else:
-        user = db.query(models.SystemUser).filter(
-            models.SystemUser.username == req.username,
-            models.SystemUser.password == req.password
-        ).first()
-        if not user:
-            raise HTTPException(status_code=401, detail="账号或密码错误")
-        if not user.phone:
-            raise HTTPException(status_code=400, detail="该账号未绑定手机号，无法接收验证码")
+        user = db.query(models.SystemUser).filter(models.SystemUser.username == req.username, models.SystemUser.password == req.password).first()
+        if not user: raise HTTPException(status_code=401, detail="账号或密码错误")
+        if not user.phone: raise HTTPException(status_code=400, detail="该账号未绑定手机号，无法接收验证码")
         phone = user.phone
 
     code = str(random.randint(100000, 999999))
@@ -308,41 +278,34 @@ def login(req: LoginReq, db: Session = Depends(get_db)):
         return {"message": "Login successful", "role": "dev", "username": "root", "phone": "13800000000"}
 
     user = db.query(models.SystemUser).filter(models.SystemUser.username == req.username).first()
-    return {
-        "message": "Login successful", 
-        "role": user.role, 
-        "username": user.username, 
-        "phone": user.phone
-    }
+    return {"message": "Login successful", "role": user.role, "username": user.username, "phone": user.phone}
 
+# =========================================================
+#             🌟 终极核心：接入 Gemini 云端大脑
+# =========================================================
 
-# 1. 配置 API Key
+# 【修改重点】：把这里的字符串换成你真实的 API Key，不要再外传啦！
 GEMINI_API_KEY = "AIzaSyAbD0drnrMc6ZWZtKcT90kjyTXRsizg3cI"
 genai.configure(api_key=GEMINI_API_KEY)
 
-# 2. 初始化模型 (推荐使用 1.5-flash，速度最快且适合毕设)
 gemini_model = genai.GenerativeModel('gemini-1.5-flash')
 
-# 3. 定义请求模型
 class AIAdviceRequest(BaseModel):
-    peak_hour: int      # 预测的高峰时段
-    max_volume: int     # 预测的最高车辆数
+    peak_hour: int
+    max_volume: int
 
-# 4. 编写真实的 AI 决策接口
 @app.post("/ai_advice")
 async def get_gemini_advice(req: AIAdviceRequest):
     try:
-        #  Prompt (提示词)
         prompt = (
             f"你是一个智慧停车系统的 AI 运营专家。当前系统预测到在 {req.peak_hour}:00 "
-            f"将达到车流顶峰（预计 {req.max_volume} 辆车）。请给出一段专业、简洁的运营建议 "
-            f"（80字以内），包含调价建议和车辆分流方案。直接输出内容，不要寒暄。"
+            f"将达到车流顶峰（预计 {req.max_volume} 辆车）。请给出一段专业、极其简洁的运营建议 "
+            f"（80字以内），包含调价建议和车辆分流方案。直接输出内容，不要说废话。"
         )
-        
-        # 真正向云端请求回答
+        # 真正发起云端请求
         response = gemini_model.generate_content(prompt)
-        
         return {"advice": response.text}
     except Exception as e:
-        # 容错处理：如果网络不通，返回预设的专家规则
-        return {"advice": "系统检测到车流激增，建议立即启动动态调价机制，并在入口大屏显示周边停车场剩余车位，引导非月租车辆错峰入场。"}
+        # 万一你在国内没挂代理访问不了Google，至少返回下面这句话兜底，不至于让系统崩溃
+        print(f"Gemini API 报错：{e}")
+        return {"advice": "系统检测到车流激增，由于网络限制，已切换至本地预设规则：建议立即启动动态调价机制，引导非月租车辆错峰入场。"}
