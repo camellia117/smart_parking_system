@@ -15,6 +15,7 @@ import string
 import base64
 from captcha.image import ImageCaptcha
 from fastapi.responses import JSONResponse
+import os # 新增 os 库用于配置代理
 
 # 引入 Gemini 的官方库
 import google.generativeai as genai
@@ -281,31 +282,52 @@ def login(req: LoginReq, db: Session = Depends(get_db)):
     return {"message": "Login successful", "role": user.role, "username": user.username, "phone": user.phone}
 
 # =========================================================
-#             🌟 终极核心：接入 Gemini 云端大脑
+#             🌟 终极核心：原生 REST 接入 Gemini 云端大脑
 # =========================================================
+import requests
+# 【核心安全修复 1】：加载根目录下的 .env 文件
+load_dotenv()  # pyright: ignore[reportUndefinedVariable]
 
-# 【修改重点】：把这里的字符串换成你真实的 API Key，不要再外传啦！
-GEMINI_API_KEY = "AIzaSyAbD0drnrMc6ZWZtKcT90kjyTXRsizg3cI"
-genai.configure(api_key=GEMINI_API_KEY)
-
-gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+# 【核心安全修复 2】：从环境变量中读取密钥，再也不用写死在代码里了！
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# 【2】强制代理配置 
+# ⚠️ 注意：如果你用的是 Clash，一般是 7890；如果是 v2ray，一般是 10808。请务必核对！
+PROXIES = {
+    "http": "http://127.0.0.1:7897",
+    "https": "http://127.0.0.1:7897"
+}
 
 class AIAdviceRequest(BaseModel):
     peak_hour: int
     max_volume: int
 
 @app.post("/ai_advice")
-async def get_gemini_advice(req: AIAdviceRequest):
+def get_gemini_advice(req: AIAdviceRequest):
     try:
         prompt = (
             f"你是一个智慧停车系统的 AI 运营专家。当前系统预测到在 {req.peak_hour}:00 "
             f"将达到车流顶峰（预计 {req.max_volume} 辆车）。请给出一段专业、极其简洁的运营建议 "
             f"（80字以内），包含调价建议和车辆分流方案。直接输出内容，不要说废话。"
         )
-        # 真正发起云端请求
-        response = gemini_model.generate_content(prompt)
-        return {"advice": response.text}
+        
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+        
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}]
+        }
+        
+        # 【神仙级调试参数】：加上 verify=False，无视所有梯子带来的证书拦截问题！
+        response = requests.post(url, json=payload, proxies=PROXIES, timeout=15.0, verify=False)
+        
+        # 如果请求失败，让它直接暴露出真实的错误！
+        if response.status_code != 200:
+            return {"advice": f"🚨 请求被拒绝了！状态码：{response.status_code}。具体原因：{response.text}"}
+        
+        result_data = response.json()
+        real_advice = result_data['candidates'][0]['content']['parts'][0]['text']
+        
+        return {"advice": real_advice}
+        
     except Exception as e:
-        # 万一你在国内没挂代理访问不了Google，至少返回下面这句话兜底，不至于让系统崩溃
-        print(f"Gemini API 报错：{e}")
-        return {"advice": "系统检测到车流激增，由于网络限制，已切换至本地预设规则：建议立即启动动态调价机制，引导非月租车辆错峰入场。"}
+        # 🚨 终极调试大法：直接把底层报错的英文打在网页上！
+        return {"advice": f"🚨 抓到真凶了！底层报错信息是：【{str(e)}】。请直接把这段话发给我！"}

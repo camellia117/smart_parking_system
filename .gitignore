@@ -13,3 +13,6 @@ parking_env/
 
 # 系统文件
 .DS_Store
+
+# 忽略机密环境变量文件，绝对不能上传到 GitHub！
+.env
