@@ -282,20 +282,18 @@ def login(req: LoginReq, db: Session = Depends(get_db)):
 #             🌟 终极核心：原生 REST 接入 Gemini 云端大脑
 # =========================================================
 import requests
-from dotenv import load_dotenv  # 🚨 关键：必须加上这行导入！
+from dotenv import load_dotenv
+import os
 
-# 【核心安全修复 1】：加载根目录下的 .env 文件
 load_dotenv()  
-
-# 【核心安全修复 2】：从环境变量中读取密钥
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# 【强制代理配置】：请确认 7897 是你的真实端口
 PROXIES = {
     "http": "http://127.0.0.1:7897",
     "https": "http://127.0.0.1:7897"
 }
 
+# --------- 这是原来的单次预测接口 (保持不变) ---------
 class AIAdviceRequest(BaseModel):
     peak_hour: int
     max_volume: int
@@ -308,14 +306,8 @@ def get_gemini_advice(req: AIAdviceRequest):
             f"将达到车流顶峰（预计 {req.max_volume} 辆车）。请给出一段专业、极其简洁的运营建议 "
             f"（80字以内），包含调价建议和车辆分流方案。直接输出内容，不要说废话。"
         )
-        
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
-        
-        payload = {
-            "contents": [{"parts": [{"text": prompt}]}]
-        }
-        
-        # 加上 verify=False，无视所有梯子带来的证书拦截问题！
+        payload = {"contents": [{"parts": [{"text": prompt}]}]}
         response = requests.post(url, json=payload, proxies=PROXIES, timeout=15.0, verify=False)
         
         if response.status_code != 200:
@@ -323,8 +315,49 @@ def get_gemini_advice(req: AIAdviceRequest):
         
         result_data = response.json()
         real_advice = result_data['candidates'][0]['content']['parts'][0]['text']
-        
         return {"advice": real_advice}
+    except Exception as e:
+        return {"advice": f"🚨 抓到真凶了！底层报错信息是：【{str(e)}】"}
+
+# --------- 🚀 【新增】：多轮对话记忆接口 ---------
+class ChatMessage(BaseModel):
+    role: str   # 'user' 或者是 'model'
+    text: str
+
+class ChatRequest(BaseModel):
+    history: List[ChatMessage] # 接收历史聊天记录
+    message: str               # 用户最新的问题
+
+@app.post("/ai_chat")
+def get_gemini_chat(req: ChatRequest):
+    try:
+        # 1. 组装符合 Gemini 规范的历史上下文记忆
+        contents = []
+        for msg in req.history:
+            contents.append({
+                "role": msg.role,
+                "parts": [{"text": msg.text}]
+            })
+        
+        # 2. 把用户刚发送的新问题追加到最后
+        contents.append({
+            "role": "user",
+            "parts": [{"text": req.message}]
+        })
+        
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+        payload = {"contents": contents}
+        
+        # 发送携带记忆的请求
+        response = requests.post(url, json=payload, proxies=PROXIES, timeout=20.0, verify=False)
+        
+        if response.status_code != 200:
+            return {"reply": f"🚨 对话请求被拒绝！状态码：{response.status_code}。具体原因：{response.text}"}
+        
+        result_data = response.json()
+        real_reply = result_data['candidates'][0]['content']['parts'][0]['text']
+        
+        return {"reply": real_reply}
         
     except Exception as e:
-        return {"advice": f"🚨 抓到真凶了！底层报错信息是：【{str(e)}】。请直接把这段话发给我！"}
+        return {"reply": f"🚨 网络通信异常或超时，错误详情：{str(e)}"}
