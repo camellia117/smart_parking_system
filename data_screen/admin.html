@@ -58,12 +58,16 @@
         .data-table th { background: rgba(0, 234, 255, 0.1); color: var(--primary); font-weight: bold; }
         .data-table tr:hover { background: rgba(255,255,255,0.05); }
         
-        /* 车位全景网格 */
+        /* 优化后的车位全景网格 */
         .parking-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; }
-        .spot { height: 140px; border-radius: 8px; border: 1px solid #333; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 18px; position: relative; overflow: hidden; transition: all 0.3s;}
+        .spot { height: 140px; border-radius: 8px; border: 1px solid #333; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 18px; position: relative; overflow: hidden; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .spot:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(0,234,255,0.3); z-index: 10; }
         .spot.free { border-color: #00ff88; background: rgba(0, 255, 136, 0.05); color: #00ff88; }
-        .spot.occupied { border-color: #ff4683; background: rgba(255, 70, 131, 0.1); color: #ff4683; }
+        .spot.occupied { border-color: #8cb6f5; background: rgba(140, 182, 245, 0.1); color: #8cb6f5; }
+        .spot.warning { border-color: #ff4683; background: rgba(255, 70, 131, 0.2); color: #ff4683; animation: pulseRed 2s infinite; }
         .spot i { font-size: 30px; margin-bottom: 10px; }
+        .spot-info { z-index: 2; margin-top: 35px; font-size: 13px; text-align: center; }
+        .spot-sub { z-index: 2; font-size: 11px; opacity: 0.8; margin-top: 2px; }
         .car-anim { position: absolute; font-size: 60px; color: rgba(255, 255, 255, 0.8); text-shadow: 0 5px 15px rgba(0,0,0,0.5); }
         
         /* 状态与卡片 */
@@ -322,29 +326,75 @@
         }
 
         // =========================================
-        // 原有基础功能完整保留
+        // 🌟 核心优化：动态渲染车位全景视图
         // =========================================
-        function renderMap() {
+        async function renderMap() {
             const grid = document.getElementById('parking-grid');
             if(!grid) return;
+            
+            // 1. 获取后端真实记录
+            let activeRecords = [];
+            try {
+                const response = await fetch(`${API_BASE}/records`);
+                const allRecords = await response.json();
+                // 筛选出尚未离场（停在场内）的车辆
+                activeRecords = allRecords.filter(r => r.leave_time === null);
+            } catch (e) {
+                console.warn("未能连接后端API，车位全景图暂无数据");
+            }
+
             grid.innerHTML = '';
             let freeCount = 0;
-            const totalSpots = 40; 
+            const totalSpots = 40; // 假设车场共有40个物理车位
+            const now = new Date();
+            
             for (let i = 1; i <= totalSpots; i++) {
-                const isOccupied = Math.random() > 0.6; 
                 const spotDiv = document.createElement('div');
-                spotDiv.className = `spot ${isOccupied ? 'occupied' : 'free'}`;
-                if (isOccupied) {
-                    spotDiv.innerHTML = `<div class="car-anim"><i class="fa-solid fa-car-side"></i></div><span style="z-index: 2; margin-top: 50px;">A-${i.toString().padStart(3, '0')}</span>`;
+                const spotId = `A-${i.toString().padStart(3, '0')}`;
+                
+                // 2. 将在场车辆按顺序(或特定逻辑)分配到车位上
+                const isOccupied = i <= activeRecords.length; 
+                const record = isOccupied ? activeRecords[i-1] : null;
+
+                if (isOccupied && record) {
+                    // 计算停放时长 (小时)
+                    const enterTime = new Date(record.enter_time);
+                    const parkedHours = (now - enterTime) / (1000 * 60 * 60);
+                    const isWarning = parkedHours > 24; // 超过24小时标记为异常停放
+
+                    spotDiv.className = `spot occupied ${isWarning ? 'warning' : ''}`;
+                    spotDiv.innerHTML = `
+                        <div class="car-anim" style="color: ${isWarning ? '#ff4683' : 'rgba(140,182,245,0.8)'};">
+                            <i class="fa-solid fa-car-side"></i>
+                        </div>
+                        <div class="spot-info">${spotId}</div>
+                        <div class="spot-sub" style="color: ${isWarning ? '#ffeb7b' : '#00eaff'};">
+                            ID: ${record.user_id}
+                        </div>
+                    `;
+                    
+                    // 点击查看车辆详情
+                    spotDiv.onclick = () => {
+                        alert(`🚗 车位：${spotId}\n👤 用户ID：${record.user_id}\n⏱️ 入场时间：${enterTime.toLocaleString()}\n⏳ 已停放：${parkedHours.toFixed(1)} 小时\n${isWarning ? '⚠️ 警告：该车辆停放时间过长！' : '✅ 状态正常'}`);
+                    };
                 } else {
                     freeCount++;
-                    spotDiv.innerHTML = `<i class="fa-solid fa-square-parking"></i><span>A-${i.toString().padStart(3, '0')}</span>`;
+                    spotDiv.className = `spot free`;
+                    spotDiv.innerHTML = `
+                        <i class="fa-solid fa-square-parking"></i>
+                        <div class="spot-info">${spotId}</div>
+                    `;
+                    // 点击空车位交互
+                    spotDiv.onclick = () => alert(`🅿️ 车位：${spotId}\n✨ 状态：空闲可泊`);
                 }
                 grid.appendChild(spotDiv);
             }
+            
+            // 更新页面顶部的空余车位数统计
             document.getElementById('free-count').innerText = freeCount;
         }
 
+        
         function manualReleaseGate() {
             const plate = document.getElementById('manual-plate').value;
             const gate = document.getElementById('manual-gate').value;
