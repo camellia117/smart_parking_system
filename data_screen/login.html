@@ -2,36 +2,59 @@
 <html lang="zh-CN">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SMART PARKING AI-OS | 统一身份认证</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { margin: 0; background: #000510; color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        .login-container { background: rgba(10, 25, 50, 0.8); border: 1px solid rgba(0, 234, 255, 0.3); border-radius: 15px; padding: 40px; width: 380px; box-shadow: 0 0 30px rgba(0, 234, 255, 0.2); backdrop-filter: blur(10px); position: relative; z-index: 2; transition: all 0.3s ease; }
-        .title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 30px; background: linear-gradient(to right, #00eaff, #008cff); -webkit-background-clip: text; color: transparent; letter-spacing: 2px; }
+        :root {
+            --bg-color: #f5f5f7;
+            --surface: #ffffff;
+            --text-main: #1d1d1f;
+            --text-muted: #86868b;
+            --border: #d2d2d7;
+            --primary: #000000;
+            --primary-hover: #333333;
+            --danger: #e3342f;
+            --focus-ring: rgba(0, 113, 227, 0.3);
+            --radius: 12px;
+            --shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+        }
+
+        body { margin: 0; background: var(--bg-color); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        
+        .login-container { background: var(--surface); border: 1px solid rgba(0,0,0,0.05); border-radius: 20px; padding: 48px 40px; width: 100%; max-width: 400px; box-shadow: var(--shadow); box-sizing: border-box; transition: all 0.3s ease; }
+        
+        .title { text-align: center; font-size: 22px; font-weight: 600; margin-bottom: 40px; color: var(--text-main); letter-spacing: -0.5px; }
+        
         .input-group { margin-bottom: 20px; position: relative; }
-        .input-group i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #00eaff; }
-        .input-group input { width: 100%; padding: 12px 15px 12px 40px; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(0, 234, 255, 0.2); border-radius: 8px; color: #fff; font-size: 14px; box-sizing: border-box; outline: none; transition: 0.3s; }
-        .input-group input:focus { border-color: #00eaff; box-shadow: 0 0 10px rgba(0, 234, 255, 0.3); }
+        .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 14px; }
+        .input-group input { width: 100%; padding: 14px 16px 14px 44px; background: #f5f5f7; border: 1px solid transparent; border-radius: var(--radius); color: var(--text-main); font-size: 15px; box-sizing: border-box; outline: none; transition: all 0.2s; }
+        .input-group input:focus { background: var(--surface); border-color: #0071e3; box-shadow: 0 0 0 4px var(--focus-ring); }
+        .input-group input::placeholder { color: var(--text-muted); }
         
-        /* 验证码组样式 */
-        .code-group { display: flex; gap: 10px; align-items: center; }
+        .code-group { display: flex; gap: 12px; align-items: center; }
         .code-group input { flex: 1; margin-bottom: 0; }
-        .captcha-img { height: 42px; border-radius: 8px; cursor: pointer; border: 1px solid rgba(0, 234, 255, 0.2); }
+        .captcha-img { height: 48px; border-radius: var(--radius); cursor: pointer; border: 1px solid var(--border); object-fit: cover; }
         
-        .btn-code { background: rgba(0, 234, 255, 0.1); border: 1px solid #00eaff; color: #00eaff; padding: 0 15px; height: 42px; border-radius: 8px; cursor: pointer; white-space: nowrap; transition: 0.3s; }
-        .btn-code:hover { background: rgba(0, 234, 255, 0.2); }
-        .btn-code:disabled { color: #555; border-color: #555; cursor: not-allowed; }
+        .btn-code { background: #f5f5f7; border: 1px solid transparent; color: var(--text-main); padding: 0 16px; height: 48px; border-radius: var(--radius); cursor: pointer; white-space: nowrap; transition: 0.2s; font-size: 14px; font-weight: 500; }
+        .btn-code:hover:not(:disabled) { background: #e8e8ed; }
+        .btn-code:disabled { color: var(--text-muted); cursor: not-allowed; }
 
-        .btn-login { width: 100%; padding: 12px; background: linear-gradient(90deg, #008cff, #00eaff); border: none; border-radius: 8px; color: #000; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
-        .btn-login:hover { box-shadow: 0 0 20px rgba(0, 234, 255, 0.5); transform: translateY(-2px); }
-        .error-msg { color: #ff4683; font-size: 13px; text-align: center; margin-top: 15px; min-height: 18px; }
-        .link-text { color: #8cb6f5; font-size: 13px; text-align: right; margin-top: 10px; cursor: pointer; transition: 0.3s; display: block; }
-        .link-text:hover { color: #00eaff; text-decoration: underline; }
+        .btn-login { width: 100%; padding: 16px; background: var(--primary); border: none; border-radius: var(--radius); color: #ffffff; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top: 12px; }
+        .btn-login:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        .btn-login:active { transform: translateY(0); }
+        
+        .error-msg { color: var(--danger); font-size: 13px; text-align: center; margin-top: 20px; min-height: 18px; font-weight: 500; }
+        .link-text { color: var(--text-muted); font-size: 13px; text-align: center; margin-top: 24px; cursor: pointer; transition: 0.2s; display: block; }
+        .link-text:hover { color: var(--text-main); }
 
-        /* 面板切换控制 */
         .panel { display: none; }
-        .panel.active { display: block; animation: fadeIn 0.5s; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .panel.active { display: block; animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 480px) {
+            .login-container { border-radius: 0; box-shadow: none; padding: 40px 24px; height: 100vh; max-width: 100%; display: flex; flex-direction: column; justify-content: center; }
+        }
     </style>
 </head>
 <body>
@@ -40,16 +63,16 @@
             <div class="title">SMART PARKING AI-OS</div>
             <div class="input-group">
                 <i class="fa-solid fa-user"></i>
-                <input type="text" id="username" placeholder="请输入系统账号" autocomplete="off">
+                <input type="text" id="username" placeholder="系统账号" autocomplete="off">
             </div>
             <div class="input-group">
                 <i class="fa-solid fa-lock"></i>
-                <input type="password" id="password" placeholder="请输入访问密钥">
+                <input type="password" id="password" placeholder="访问密钥">
             </div>
             <div class="input-group code-group">
                 <i class="fa-solid fa-image"></i>
-                <input type="text" id="captcha-text" placeholder="图形验证码 (不区分大小写)">
-                <img id="captcha-img" class="captcha-img" src="" alt="获取中..." onclick="loadCaptcha()" title="看不清？点击刷新">
+                <input type="text" id="captcha-text" placeholder="图形验证码">
+                <img id="captcha-img" class="captcha-img" src="" alt="..." onclick="loadCaptcha()" title="点击刷新">
             </div>
             <div class="input-group code-group">
                 <i class="fa-solid fa-shield-halved"></i>
@@ -57,16 +80,16 @@
                 <button class="btn-code" id="btn-login-sms" onclick="sendLoginSms()">获取短信</button>
             </div>
             
-            <button class="btn-login" onclick="attemptLogin()"><i class="fa-solid fa-right-to-bracket"></i> 安全登入</button>
+            <button class="btn-login" onclick="attemptLogin()">安全登入</button>
             <span class="link-text" onclick="switchPanel('forgot-panel')">忘记密码？找回密钥</span>
             <div class="error-msg" id="login-error"></div>
         </div>
 
         <div id="forgot-panel" class="panel">
-            <div class="title" style="font-size: 20px;">找回访问密钥</div>
+            <div class="title">找回访问密钥</div>
             <div class="input-group">
                 <i class="fa-solid fa-phone"></i>
-                <input type="text" id="f-phone" placeholder="请输入绑定的手机号">
+                <input type="text" id="f-phone" placeholder="绑定的手机号">
             </div>
             <div class="input-group code-group">
                 <i class="fa-solid fa-shield-halved"></i>
@@ -75,22 +98,18 @@
             </div>
             <div class="input-group">
                 <i class="fa-solid fa-key"></i>
-                <input type="password" id="f-new-pass" placeholder="请输入新密码">
+                <input type="password" id="f-new-pass" placeholder="新密码">
             </div>
-            <button class="btn-login" onclick="resetPassword()"><i class="fa-solid fa-check"></i> 重置并返回登录</button>
+            <button class="btn-login" onclick="resetPassword()">重置并返回登录</button>
             <span class="link-text" onclick="switchPanel('login-panel')">返回登录页</span>
             <div class="error-msg" id="forgot-error"></div>
         </div>
-
     </div>
 
     <script>
-        // ======= 全局变量与页面初始化 =======
         let currentCaptchaId = "";
         
-        window.onload = function() {
-            loadCaptcha();
-        }
+        window.onload = function() { loadCaptcha(); }
 
         function switchPanel(panelId) {
             document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -98,20 +117,18 @@
             document.querySelectorAll('.error-msg').forEach(e => e.innerText = '');
         }
 
-        // ======= 【新增】加载/刷新图形验证码 =======
         async function loadCaptcha() {
             try {
                 const res = await fetch("http://127.0.0.1:8000/get_captcha/");
                 const data = await res.json();
                 document.getElementById('captcha-img').src = data.image;
                 currentCaptchaId = data.captcha_id;
-                document.getElementById('captcha-text').value = ''; // 刷新时清空输入框
+                document.getElementById('captcha-text').value = '';
             } catch (e) {
-                document.getElementById('login-error').innerText = "⛔ 无法连接服务器获取验证码";
+                document.getElementById('login-error').innerHTML = "<i class='fa-solid fa-circle-exclamation'></i> 无法连接服务器获取验证码";
             }
         }
 
-        // ======= 【新增】请求发送登录短信 =======
         let loginCountdown = 60;
         let loginTimer = null;
 
@@ -122,31 +139,25 @@
             const err = document.getElementById('login-error');
 
             if (!u || !p || !c) {
-                err.innerText = "⛔ 请先输入账号、密码和图形验证码";
+                err.innerHTML = "<i class='fa-solid fa-circle-exclamation'></i> 请先输入账号、密码和图形验证码";
                 return;
             }
 
             const btn = document.getElementById('btn-login-sms');
             btn.disabled = true;
-            err.innerText = "正在核对信息，请稍候...";
+            err.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> 正在核对信息...";
+            err.style.color = "var(--text-muted)";
 
             try {
                 const res = await fetch("http://127.0.0.1:8000/send_login_sms/", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        username: u,
-                        password: p,
-                        captcha_id: currentCaptchaId,
-                        captcha_text: c
-                    })
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username: u, password: p, captcha_id: currentCaptchaId, captcha_text: c })
                 });
 
                 const data = await res.json();
                 if (res.ok) {
-                    // 【测试专用】将模拟验证码打印在屏幕上
-                    err.innerText = `✅ 短信已发送至 ${data.phone} (验证码: ${data.mock_code})`;
-                    err.style.color = '#00ff88';
+                    err.innerHTML = `<i class='fa-solid fa-circle-check'></i> 短信已发送 (验证码: ${data.mock_code})`;
+                    err.style.color = "#34c759";
                     
                     loginTimer = setInterval(() => {
                         loginCountdown--;
@@ -156,36 +167,34 @@
                             btn.disabled = false;
                             btn.innerText = '获取短信';
                             loginCountdown = 60;
-                            loadCaptcha(); // 超时后强制用户重新刷新验证码
+                            loadCaptcha();
                         }
                     }, 1000);
                 } else {
-                    err.innerText = '⛔ ' + (data.detail || "验证失败");
-                    err.style.color = '#ff4683';
+                    err.innerHTML = "<i class='fa-solid fa-circle-exclamation'></i> " + (data.detail || "验证失败");
+                    err.style.color = "var(--danger)";
                     btn.disabled = false;
-                    loadCaptcha(); // 后端拦截（如图形码错误）后强制刷新
+                    loadCaptcha();
                 }
             } catch (e) {
-                err.innerText = '⛔ 网络请求失败';
-                err.style.color = '#ff4683';
+                err.innerHTML = "<i class='fa-solid fa-circle-exclamation'></i> 网络请求失败";
+                err.style.color = "var(--danger)";
                 btn.disabled = false;
             }
         }
 
-        // ======= 修改后的登录逻辑 =======
         async function attemptLogin() {
             const u = document.getElementById('username').value;
             const sms = document.getElementById('sms-code').value;
             const err = document.getElementById('login-error');
 
-            if (!u || !sms) { err.innerText = "⛔ 请输入账号和短信验证码！"; return; }
-            err.innerText = "正在验证最终权限...";
+            if (!u || !sms) { err.innerHTML = "<i class='fa-solid fa-circle-exclamation'></i> 请输入账号和短信验证码"; return; }
+            err.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> 正在验证...";
+            err.style.color = "var(--text-muted)";
 
             try {
                 const res = await fetch("http://127.0.0.1:8000/login/", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    // 注意：现在我们只传账号和短信验证码给后端
+                    method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ username: u, sms_code: sms }) 
                 });
 
@@ -195,40 +204,35 @@
                     localStorage.setItem("system_role", data.role);
                     localStorage.setItem("system_username", data.username);
                     
-                    err.style.color = "#00eaff";
-                    err.innerText = "✅ 授权成功，正在初始化中枢...";
+                    err.style.color = "#34c759";
+                    err.innerHTML = "<i class='fa-solid fa-circle-check'></i> 授权成功，正在跳转...";
                     
                     setTimeout(() => {
                         if (data.role === "dev" || data.role === "root") {
                             window.location.href = 'http://127.0.0.1:8501/?auth_token=dev_granted';
                         } else if (data.role === "screen") {
                             window.location.href = 'screen.html';
-                        } else if (data.role === 'admin'){
-                            window.location.href = 'admin.html';
                         } else {
                             window.location.href = 'admin.html'; 
                         }
                     }, 800);
                 } else {
                     const data = await res.json();
-                    err.innerText = "⛔ " + (data.detail || "验证码错误！");
-                    err.style.color = '#ff4683';
+                    err.innerHTML = "<i class='fa-solid fa-circle-exclamation'></i> " + (data.detail || "验证码错误");
+                    err.style.color = "var(--danger)";
                 }
             } catch (e) {
-                err.innerText = "⛔ 无法连接到认证服务器！";
+                err.innerHTML = "<i class='fa-solid fa-circle-exclamation'></i> 无法连接到认证服务器";
+                err.style.color = "var(--danger)";
             }
         }
 
-        // 发送验证码倒计时逻辑
         let countdown = 60;
         let timer = null;
         async function sendCode() {
             const phone = document.getElementById('f-phone').value;
             const errorMsg = document.getElementById('forgot-error');
-            if (!phone) {
-                errorMsg.innerText = '⛔ 请先输入绑定的手机号';
-                return;
-            }
+            if (!phone) { errorMsg.innerHTML = "<i class='fa-solid fa-circle-exclamation'></i> 请先输入手机号"; return; }
 
             const btn = document.getElementById('btn-send-code');
             btn.disabled = true;
@@ -238,9 +242,8 @@
                 const data = await res.json();
                 
                 if (res.ok) {
-                    // 【测试专用】将验证码显示在页面上，实际项目中应去掉这行
-                    errorMsg.innerText = `✅ 验证码已发送 (模拟验证码: ${data.mock_code})`;
-                    errorMsg.style.color = '#00ff88';
+                    errorMsg.innerHTML = `<i class='fa-solid fa-circle-check'></i> 验证码已发送 (模拟验证码: ${data.mock_code})`;
+                    errorMsg.style.color = '#34c759';
                     
                     timer = setInterval(() => {
                         countdown--;
@@ -253,18 +256,17 @@
                         }
                     }, 1000);
                 } else {
-                    errorMsg.innerText = '⛔ ' + data.detail;
-                    errorMsg.style.color = '#ff4683';
+                    errorMsg.innerHTML = "<i class='fa-solid fa-circle-exclamation'></i> " + data.detail;
+                    errorMsg.style.color = 'var(--danger)';
                     btn.disabled = false;
                 }
             } catch (e) {
-                errorMsg.innerText = '⛔ 网络请求失败';
-                errorMsg.style.color = '#ff4683';
+                errorMsg.innerHTML = "<i class='fa-solid fa-circle-exclamation'></i> 网络请求失败";
+                errorMsg.style.color = 'var(--danger)';
                 btn.disabled = false;
             }
         }
 
-        // 重置密码逻辑
         async function resetPassword() {
             const phone = document.getElementById('f-phone').value;
             const code = document.getElementById('f-code').value;
@@ -272,34 +274,31 @@
             const errorMsg = document.getElementById('forgot-error');
 
             if(!phone || !code || !newPass) {
-                errorMsg.innerText = '⛔ 请完整填写所有信息';
-                errorMsg.style.color = '#ff4683';
+                errorMsg.innerHTML = "<i class='fa-solid fa-circle-exclamation'></i> 请完整填写所有信息";
+                errorMsg.style.color = 'var(--danger)';
                 return;
             }
 
             try {
                 const res = await fetch("http://127.0.0.1:8000/forgot_password/", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ phone: phone, new_password: newPass, code: code })
                 });
 
                 if (res.ok) {
-                    alert("✅ 密码重置成功，请使用新密码登录！");
+                    alert("密码重置成功，请使用新密码登录。");
                     switchPanel('login-panel');
                     document.getElementById('password').value = '';
                 } else {
                     const data = await res.json();
-                    errorMsg.innerText = '⛔ ' + (data.detail || '重置失败');
-                    errorMsg.style.color = '#ff4683';
+                    errorMsg.innerHTML = "<i class='fa-solid fa-circle-exclamation'></i> " + (data.detail || '重置失败');
+                    errorMsg.style.color = 'var(--danger)';
                 }
             } catch (e) {
-                errorMsg.innerText = '⛔ 网络连接失败，请检查后端服务';
-                errorMsg.style.color = '#ff4683';
+                errorMsg.innerHTML = "<i class='fa-solid fa-circle-exclamation'></i> 网络连接失败";
+                errorMsg.style.color = 'var(--danger)';
             }
         }
-
-
     </script>
 </body>
 </html>

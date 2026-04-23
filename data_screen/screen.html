@@ -2,232 +2,113 @@
 <html lang="zh-CN">
 <head>
     <meta charset="utf-8">
-    <title>智慧停车AI全景监控大屏</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧停车全景监控大屏</title>
     <script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         :root {
-            --bg-color: #02091b;
-            --primary: #00eaff;
-            --danger: #ff4683;
-            --warning: #ffeb7b;
-            --success: #00ff88;
-            --panel-bg: rgba(6, 15, 36, 0.7);
-            --border-color: rgba(0, 234, 255, 0.2);
+            --bg-color: #fbfbfd;
+            --surface: #ffffff;
+            --text-main: #1d1d1f;
+            --text-muted: #86868b;
+            --border: #d2d2d7;
+            --border-light: rgba(0,0,0,0.05);
+            --primary: #1d1d1f;
+            --success: #34c759;
+            --danger: #e3342f;
+            --accent: #0071e3;
+            --radius: 16px;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
         
-        /* 强制 100vh 和 100vw，绝对禁止滚动条 */
-        body {
-            background-color: var(--bg-color);
-            background-image: 
-                radial-gradient(circle at 50% 50%, rgba(0, 140, 255, 0.1) 0%, rgba(2, 9, 27, 1) 80%),
-                linear-gradient(rgba(0, 234, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 234, 255, 0.03) 1px, transparent 1px);
-            background-size: 100% 100%, 30px 30px, 30px 30px;
-            color: #fff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow: hidden;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+        body { background-color: var(--bg-color); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; min-height: 100vh; }
 
-        /* ================= 顶部标题栏 (高度固定 8%) ================= */
-        .header {
-            height: 8%;
-            min-height: 60px;
-            background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1000 80" xmlns="http://www.w3.org/2000/svg"><path d="M0,0 L1000,0 L1000,50 L800,50 L750,80 L250,80 L200,50 L0,50 Z" fill="rgba(0,234,255,0.05)" stroke="rgba(0,234,255,0.4)" stroke-width="2"/></svg>') no-repeat center bottom;
-            background-size: 100% 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-        }
+        .header { height: 80px; display: flex; justify-content: space-between; align-items: center; padding: 0 32px; background: var(--surface); border-bottom: 1px solid var(--border-light); flex-shrink: 0; }
+        .header h1 { font-size: 20px; color: var(--text-main); font-weight: 600; letter-spacing: -0.5px; }
+        .header .clock { font-size: 14px; color: var(--text-muted); font-weight: 500; font-family: ui-monospace, monospace; }
+        .header .btn-back { background: transparent; border: 1px solid var(--border); color: var(--text-main); padding: 8px 16px; border-radius: 8px; cursor: pointer; transition: 0.2s; font-size: 13px; font-weight: 500; }
+        .header .btn-back:hover { background: #f5f5f7; }
 
-        .header h1 {
-            font-size: 2rem;
-            letter-spacing: 4px;
-            color: #fff;
-            text-shadow: 0 0 10px var(--primary), 0 0 20px rgba(0, 140, 255, 0.8);
-            font-weight: 900;
-        }
+        .main-container { flex: 1; display: flex; padding: 24px; gap: 24px; }
 
-        .header .clock {
-            position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
-            font-size: 1.2rem; color: var(--primary); font-family: monospace; font-weight: bold;
-        }
+        .col-left { width: 28%; display: flex; flex-direction: column; gap: 24px; }
+        .col-center { width: 44%; display: flex; flex-direction: column; gap: 24px; }
+        .col-right { width: 28%; display: flex; flex-direction: column; gap: 24px; }
+
+        .panel { background: var(--surface); border: 1px solid var(--border-light); border-radius: var(--radius); display: flex; flex-direction: column; box-shadow: var(--shadow); flex: 1; min-height: 250px; overflow: hidden; }
         
-        .header .btn-back {
-            position: absolute; left: 20px; top: 50%; transform: translateY(-50%);
-            background: transparent; border: 1px solid var(--primary); color: var(--primary);
-            padding: 5px 15px; border-radius: 4px; cursor: pointer; transition: 0.3s; font-size: 0.9rem;
-        }
-        .header .btn-back:hover { background: rgba(0,234,255,0.2); box-shadow: 0 0 10px var(--primary); }
+        .panel-title { padding: 20px 24px 0 24px; font-size: 14px; font-weight: 600; color: var(--text-main); display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .panel-title i { color: var(--text-muted); }
 
-        /* ================= 主体布局 (高度 92%) ================= */
-        .main-container {
-            height: 92%;
-            display: flex;
-            padding: 15px;
-            gap: 15px;
-        }
-
-        /* 左、中、右 比例分配 */
-        .col-left { width: 25%; display: flex; flex-direction: column; gap: 15px; }
-        .col-center { width: 50%; display: flex; flex-direction: column; gap: 15px; }
-        .col-right { width: 25%; display: flex; flex-direction: column; gap: 15px; }
-
-        /* 面板通用样式 (Flex 弹簧拉伸) */
-        .panel {
-            background: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            position: relative;
-            flex: 1; /* 平分剩余高度 */
-            display: flex;
-            flex-direction: column;
-            box-shadow: inset 0 0 20px rgba(0, 140, 255, 0.1);
-            backdrop-filter: blur(5px);
-            min-height: 0; /* 极其关键：防止内容撑爆导致滚动条 */
-        }
-
-        /* 赛博朋克四角高亮 */
-        .panel::before { content: ''; position: absolute; top: -1px; left: -1px; width: 10px; height: 10px; border-top: 2px solid var(--primary); border-left: 2px solid var(--primary); }
-        .panel::after { content: ''; position: absolute; bottom: -1px; right: -1px; width: 10px; height: 10px; border-bottom: 2px solid var(--primary); border-right: 2px solid var(--primary); }
-
-        .panel-title {
-            height: 35px;
-            line-height: 35px;
-            padding-left: 15px;
-            font-size: 0.9rem;
-            font-weight: bold;
-            color: #fff;
-            background: linear-gradient(90deg, rgba(0,234,255,0.2) 0%, transparent 100%);
-            border-bottom: 1px solid rgba(0,234,255,0.1);
-            display: flex; align-items: center; gap: 8px;
-            flex-shrink: 0;
-        }
-
-        .panel-content { flex: 1; position: relative; padding: 10px; min-height: 0; overflow: hidden; }
+        .panel-content { flex: 1; position: relative; padding: 16px; min-height: 0; }
         .chart { width: 100%; height: 100%; }
 
-        /* ================= 中间区域专属特效 ================= */
+        .metrics-bar { flex-shrink: 0; display: flex; gap: 16px; }
+        .metric-box { flex: 1; background: var(--surface); border: 1px solid var(--border-light); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
+        .m-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
+        .m-value { font-size: 28px; font-weight: 600; color: var(--text-main); letter-spacing: -1px; }
+
+        .radar-panel { flex: 1; display: flex; justify-content: center; align-items: center; position: relative; background: #fbfbfd; border: 1px solid var(--border-light); border-radius: var(--radius); overflow: hidden; box-shadow: inset 0 0 40px rgba(0,0,0,0.01); }
+        .radar-map { width: 300px; height: 300px; border-radius: 50%; border: 1px solid var(--border); position: relative; }
+        .radar-map::before { content: ''; position: absolute; top: 10%; left: 10%; width: 80%; height: 80%; border-radius: 50%; border: 1px dashed var(--border); }
+        .radar-map::after { content: ''; position: absolute; top: 25%; left: 25%; width: 50%; height: 50%; border-radius: 50%; border: 1px solid var(--border-light); }
         
-        /* 1. 核心指标卡片 (横排 5 个) */
-        .metrics-bar {
-            flex-shrink: 0;
-            height: 12%; 
-            display: flex;
-            gap: 10px;
-        }
-        .metric-box {
-            flex: 1;
-            background: linear-gradient(180deg, rgba(0,140,255,0.1) 0%, rgba(0,234,255,0.05) 100%);
-            border: 1px solid rgba(0,234,255,0.3);
-            border-radius: 6px;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            position: relative; overflow: hidden;
-        }
-        .metric-box::after {
-            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-            transform: skewX(-20deg); animation: flash 5s infinite;
-        }
-        @keyframes flash { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
-
-        .m-label { font-size: 0.8rem; color: #8cb6f5; margin-bottom: 2px; }
-        .m-value { font-size: 1.8rem; font-weight: 900; font-family: monospace; }
-        .c-yellow { color: var(--warning); text-shadow: 0 0 10px var(--warning); }
-        .c-cyan { color: var(--primary); text-shadow: 0 0 10px var(--primary); }
-        .c-green { color: var(--success); text-shadow: 0 0 10px var(--success); }
-        .c-red { color: var(--danger); text-shadow: 0 0 10px var(--danger); }
-
-        /* 2. 中心 3D 雷达动画 */
-        .radar-panel {
-            flex: 1; display: flex; justify-content: center; align-items: center; 
-            position: relative; overflow: hidden;
-            /* 🚀 彻底抛弃不靠谱的网络图片，用纯 CSS 绘制极光网格底纹 */
-            background-image: 
-                radial-gradient(circle at center, rgba(0, 234, 255, 0.08) 0%, transparent 60%),
-                linear-gradient(rgba(0, 234, 255, 0.05) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 234, 255, 0.05) 1px, transparent 1px);
-            background-size: 100% 100%, 20px 20px, 20px 20px;
-            background-position: center center;
-        }
-        .radar-map {
-            width: 45vh; height: 45vh; border-radius: 50%; border: 1px solid rgba(0,234,255,0.5); 
-            position: relative; box-shadow: inset 0 0 60px rgba(0,234,255,0.3); 
-            background: radial-gradient(circle, rgba(0,234,255,0.15) 0%, transparent 60%);
-        }
-        .radar-map::before { content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: rgba(0,234,255,0.3); }
-        .radar-map::after { content: ''; position: absolute; top: 0; left: 50%; width: 1px; height: 100%; background: rgba(0,234,255,0.3); }
+        .radar-line { position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: var(--border-light); }
+        .radar-line-v { position: absolute; top: 0; left: 50%; width: 1px; height: 100%; background: var(--border-light); }
         
-        .radar-scan {
-            position: absolute; top: 50%; left: 50%; width: 50%; height: 50%;
-            background: conic-gradient(from 0deg, transparent 70%, rgba(0, 234, 255, 0.8) 100%);
-            transform-origin: 0 0; animation: scan 3s linear infinite;
-        }
-        @keyframes scan { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        .car-dot { position: absolute; width: 8px; height: 8px; background: var(--success); border-radius: 50%; box-shadow: 0 0 10px var(--success); animation: pulse 2s infinite; }
-        .car-dot.danger { background: var(--danger); box-shadow: 0 0 10px var(--danger); }
-        @keyframes pulse { 0% { transform: scale(0.8); opacity: 0.5; } 50% { transform: scale(1.5); opacity: 1; } 100% { transform: scale(0.8); opacity: 0.5; } }
+        .car-dot { position: absolute; width: 8px; height: 8px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 0 4px rgba(0,113,227,0.2); }
+        .car-dot.danger { background: var(--danger); box-shadow: 0 0 0 4px rgba(227,52,47,0.2); }
 
-        /* 3. 底部设备健康状态条 */
-        .device-bar {
-            flex-shrink: 0; height: 10%; display: flex; gap: 15px; align-items: center; justify-content: space-around;
-            background: rgba(0,0,0,0.3); border-radius: 8px; padding: 0 20px; border: 1px solid rgba(255,255,255,0.05);
-        }
-        .dev-item { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #8cb6f5; }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--success); box-shadow: 0 0 8px var(--success); animation: blink 2s infinite;}
-        @keyframes blink { 0%, 100% {opacity:1;} 50% {opacity:0.4;} }
+        .device-bar { flex-shrink: 0; display: flex; gap: 16px; align-items: center; justify-content: space-between; background: var(--surface); border-radius: var(--radius); padding: 16px 24px; border: 1px solid var(--border-light); box-shadow: var(--shadow); }
+        .dev-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-main); font-weight: 500;}
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
 
-        /* ================= 滚动列表特效 ================= */
         .scroll-wrapper { width: 100%; height: 100%; overflow: hidden; position: relative; }
-        .scroll-list { list-style: none; animation: scrollUp 15s linear infinite; position: absolute; width: 100%; }
+        .scroll-list { list-style: none; animation: scrollUp 20s linear infinite; position: absolute; width: 100%; padding: 0 8px; }
         .scroll-list:hover { animation-play-state: paused; }
-        .scroll-item {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 8px 12px; margin-bottom: 8px;
-            background: rgba(255,255,255,0.05); border-left: 3px solid var(--primary);
-            border-radius: 4px; font-size: 0.8rem;
-        }
-        .scroll-item.out { border-left-color: var(--warning); }
-        .s-plate { font-weight: bold; background: #2b4b6f; padding: 2px 6px; border-radius: 3px; }
-        .s-time { color: #8cb6f5; font-family: monospace; }
-        .s-tag { padding: 2px 6px; border-radius: 10px; font-size: 0.7rem; }
-        .s-tag.in { background: rgba(0,255,136,0.2); color: var(--success); }
-        .s-tag.out { background: rgba(255,235,123,0.2); color: var(--warning); }
+        .scroll-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-light); font-size: 13px; }
+        .s-plate { font-weight: 600; color: var(--text-main); font-family: monospace; }
+        .s-time { color: var(--text-muted); }
+        .s-tag { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 500; background: #f5f5f7; color: var(--text-muted); }
         
         @keyframes scrollUp { 0% { top: 0; } 100% { top: -100%; } }
 
+        @media (max-width: 1024px) {
+            body { height: auto; overflow-y: auto; }
+            .main-container { flex-direction: column; }
+            .col-left, .col-center, .col-right { width: 100%; }
+            .panel { min-height: 350px; }
+            .metrics-bar { flex-wrap: wrap; }
+            .metric-box { min-width: 150px; }
+            .radar-panel { min-height: 400px; }
+        }
     </style>
 </head>
 <body>
 
     <div class="header">
         <button class="btn-back" onclick="window.close()"><i class="fa-solid fa-arrow-left"></i> 返回控制台</button>
-        <h1>智慧停车 AI 孪生调度中枢</h1>
-        <div class="clock" id="clock">2026-04-02 12:00:00</div>
+        <h1>调度中枢监控视图</h1>
+        <div class="clock" id="clock">--</div>
     </div>
 
     <div class="main-container">
         
         <div class="col-left">
             <div class="panel">
-                <div class="panel-title"><i class="fa-solid fa-chart-line"></i> 24H 潮汐车流 AI 预测</div>
+                <div class="panel-title"><i class="fa-solid fa-chart-line"></i> 潮汐预测</div>
                 <div class="panel-content"><div id="chart-traffic" class="chart"></div></div>
             </div>
             <div class="panel">
-                <div class="panel-title"><i class="fa-solid fa-car-side"></i> 车辆画像与新能源占比</div>
+                <div class="panel-title"><i class="fa-solid fa-car"></i> 车辆画像</div>
                 <div class="panel-content"><div id="chart-type" class="chart"></div></div>
             </div>
             <div class="panel">
-                <div class="panel-title"><i class="fa-solid fa-coins"></i> 多渠道营收结构分析</div>
+                <div class="panel-title"><i class="fa-solid fa-coins"></i> 营收结构</div>
                 <div class="panel-content"><div id="chart-revenue" class="chart"></div></div>
             </div>
         </div>
@@ -235,61 +116,48 @@
         <div class="col-center">
             <div class="metrics-bar">
                 <div class="metric-box">
-                    <div class="m-label">累计总营收(元)</div>
-                    <div class="m-value c-yellow" id="val-revenue">0.00</div>
+                    <div class="m-label">总营收 (元)</div>
+                    <div class="m-value" id="val-revenue">0.00</div>
                 </div>
                 <div class="metric-box">
-                    <div class="m-label">今日吞吐(车次)</div>
-                    <div class="m-value c-cyan" id="val-vehicles">0</div>
+                    <div class="m-label">今日吞吐 (次)</div>
+                    <div class="m-value" id="val-vehicles">0</div>
                 </div>
                 <div class="metric-box">
-                    <div class="m-label">全网空余(位)</div>
-                    <div class="m-value c-green" id="val-spaces">0</div>
-                </div>
-                <div class="metric-box">
-                    <div class="m-label">空闲充电桩(个)</div>
-                    <div class="m-value c-green">12</div>
-                </div>
-                <div class="metric-box" style="border-color: rgba(255,70,131,0.5);">
-                    <div class="m-label" style="color:var(--danger)">未处理告警</div>
-                    <div class="m-value c-red">2</div>
+                    <div class="m-label">全网空余 (位)</div>
+                    <div class="m-value" id="val-spaces">0</div>
                 </div>
             </div>
 
-            <div class="panel radar-panel" style="border: none; box-shadow: none;">
+            <div class="radar-panel">
                 <div class="radar-map">
-                    <div class="radar-scan"></div>
+                    <div class="radar-line"></div>
+                    <div class="radar-line-v"></div>
                     <div class="car-dot" style="top: 20%; left: 30%;"></div>
                     <div class="car-dot" style="top: 50%; left: 20%;"></div>
                     <div class="car-dot danger" style="top: 75%; left: 60%;"></div>
                     <div class="car-dot" style="top: 40%; left: 80%;"></div>
-                    <div class="car-dot danger" style="top: 60%; left: 40%;"></div>
-                </div>
-                <div style="position: absolute; bottom: 10px; color: #8cb6f5; font-size: 0.8rem; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px;">
-                    <i class="fa-solid fa-circle" style="color:var(--success); font-size:10px;"></i> 正常入网 &nbsp;&nbsp;
-                    <i class="fa-solid fa-circle" style="color:var(--danger); font-size:10px;"></i> 黑名单/逃单告警
                 </div>
             </div>
 
             <div class="device-bar">
-                <div class="dev-item"><div class="status-dot"></div> AI 计算集群</div>
-                <div class="dev-item"><div class="status-dot"></div> 入口道闸(东/南)</div>
-                <div class="dev-item"><div class="status-dot"></div> 边缘摄像头池</div>
-                <div class="dev-item"><div class="status-dot"></div> 数据库双活容灾</div>
+                <div class="dev-item"><div class="status-dot"></div> AI 节点正常</div>
+                <div class="dev-item"><div class="status-dot"></div> 边缘硬件在线</div>
+                <div class="dev-item"><div class="status-dot"></div> 数据库同步中</div>
             </div>
         </div>
 
         <div class="col-right">
             <div class="panel">
-                <div class="panel-title"><i class="fa-solid fa-signal"></i> 分布式车场饱和度监控</div>
+                <div class="panel-title"><i class="fa-solid fa-signal"></i> 饱和度监控</div>
                 <div class="panel-content"><div id="chart-lots" class="chart"></div></div>
             </div>
             <div class="panel">
-                <div class="panel-title"><i class="fa-solid fa-gauge-high"></i> 全局周转利用率评测</div>
+                <div class="panel-title"><i class="fa-solid fa-gauge-high"></i> 周转利用率</div>
                 <div class="panel-content"><div id="chart-util" class="chart"></div></div>
             </div>
             <div class="panel">
-                <div class="panel-title"><i class="fa-solid fa-rectangle-list"></i> 车辆放行防伪流</div>
+                <div class="panel-title"><i class="fa-solid fa-list-ul"></i> 实时流水</div>
                 <div class="panel-content">
                     <div class="scroll-wrapper">
                         <ul class="scroll-list" id="realtime-list"></ul>
@@ -303,12 +171,10 @@
     <script>
         const API_BASE = 'http://127.0.0.1:8000';
 
-        // 1. 时钟
         setInterval(() => {
             document.getElementById('clock').innerText = new Date().toLocaleString('zh-CN', { hour12: false });
         }, 1000);
 
-        // 2. 初始化 ECharts
         const cTraffic = echarts.init(document.getElementById('chart-traffic'));
         const cType = echarts.init(document.getElementById('chart-type'));
         const cRev = echarts.init(document.getElementById('chart-revenue'));
@@ -319,83 +185,71 @@
             cTraffic.resize(); cType.resize(); cRev.resize(); cLots.resize(); cUtil.resize();
         });
 
-        // 3. 静态图表配置 (车辆画像 & 利用率)
         cType.setOption({
-            tooltip: { trigger: 'item', backgroundColor: 'rgba(0,0,0,0.8)', textStyle: { color: '#fff' } },
-            legend: { top: 'bottom', textStyle: { color: '#8cb6f5', fontSize: 10 }, itemWidth: 10, itemHeight: 10 },
-            color: ['#00ff88', '#00eaff', '#ffeb7b', '#ff4683'],
+            tooltip: { trigger: 'item', backgroundColor: '#fff', textStyle: { color: '#1d1d1f' }, borderColor: '#d2d2d7' },
+            legend: { top: 'bottom', textStyle: { color: '#86868b', fontSize: 10 }, icon: 'circle' },
+            color: ['#1d1d1f', '#86868b', '#d2d2d7', '#0071e3'],
             series: [{
-                type: 'pie', radius: ['30%', '70%'], roseType: 'radius',
+                type: 'pie', radius: ['40%', '70%'],
                 label: { show: false },
-                data: [
-                    { value: 45, name: '绿牌新能源' },
-                    { value: 30, name: '月租VIP' },
-                    { value: 20, name: '临停蓝牌' },
-                    { value: 5, name: '大型黄牌' }
-                ]
+                itemStyle: { borderWidth: 2, borderColor: '#fff' },
+                data: [ { value: 45, name: '绿牌' }, { value: 30, name: '月租' }, { value: 20, name: '临停' }, { value: 5, name: '其他' } ]
             }]
         });
 
         cUtil.setOption({
             series: [{
                 type: 'gauge', center: ['50%', '60%'], radius: '90%',
-                axisLine: { lineStyle: { width: 10, color: [[0.3, '#00ff88'], [0.7, '#00eaff'], [1, '#ff4683']] } },
-                pointer: { itemStyle: { color: 'auto' } },
-                axisTick: { distance: -15, length: 8, lineStyle: { color: '#fff', width: 1 } },
-                splitLine: { distance: -20, length: 20, lineStyle: { color: '#fff', width: 2 } },
-                axisLabel: { color: 'inherit', distance: 25, fontSize: 10 },
-                detail: { valueAnimation: true, formatter: '{value}%', color: 'inherit', fontSize: 24, padding: [40, 0, 0, 0] },
-                data: [{ value: 78, name: '综合周转率' }],
-                title: { color: '#8cb6f5', fontSize: 12, offsetCenter: [0, '80%'] }
+                axisLine: { lineStyle: { width: 8, color: [[0.3, '#f5f5f7'], [0.7, '#d2d2d7'], [1, '#1d1d1f']] } },
+                pointer: { itemStyle: { color: '#1d1d1f' } },
+                axisTick: { show: false },
+                splitLine: { show: false },
+                axisLabel: { show: false },
+                detail: { valueAnimation: true, formatter: '{value}%', color: '#1d1d1f', fontSize: 24, padding: [20, 0, 0, 0] },
+                data: [{ value: 78, name: '综合利用' }],
+                title: { color: '#86868b', fontSize: 12, offsetCenter: [0, '80%'] }
             }]
         });
 
-        // 4. 动态图表渲染函数
         function renderTraffic(hours, data) {
             cTraffic.setOption({
-                tooltip: { trigger: 'axis', backgroundColor: 'rgba(0,0,0,0.8)', borderColor: '#00eaff', textStyle: { color: '#fff' } },
-                grid: { left: '2%', right: '5%', bottom: '5%', top: '15%', containLabel: true },
-                xAxis: { type: 'category', data: hours, axisLabel: { color: '#8cb6f5', fontSize: 10 }, axisLine: { lineStyle: { color: 'rgba(0,234,255,0.2)' } } },
-                yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, axisLabel: { color: '#8cb6f5', fontSize: 10 } },
+                tooltip: { trigger: 'axis', backgroundColor: '#fff', borderColor: '#d2d2d7', textStyle: { color: '#1d1d1f' } },
+                grid: { left: '5%', right: '5%', bottom: '5%', top: '15%', containLabel: true },
+                xAxis: { type: 'category', data: hours, axisLabel: { color: '#86868b', fontSize: 10 }, axisLine: { lineStyle: { color: '#d2d2d7' } } },
+                yAxis: { type: 'value', splitLine: { lineStyle: { color: '#f5f5f7' } }, axisLabel: { color: '#86868b', fontSize: 10 } },
                 series: [{
                     data: data, type: 'line', smooth: true, symbol: 'none',
-                    lineStyle: { width: 2, color: '#00eaff' },
-                    areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset: 0, color: 'rgba(0,234,255,0.5)'}, {offset: 1, color: 'rgba(0,234,255,0.01)'}]) }
+                    lineStyle: { width: 2, color: '#1d1d1f' },
+                    areaStyle: { color: 'rgba(29, 29, 31, 0.05)' }
                 }]
             });
         }
 
         function renderRevenue() {
             cRev.setOption({
-                tooltip: { trigger: 'item', backgroundColor: 'rgba(0,0,0,0.8)', textStyle: { color: '#fff' } },
-                grid: { left: '2%', right: '5%', bottom: '5%', top: '5%', containLabel: true },
+                tooltip: { trigger: 'item', backgroundColor: '#fff', borderColor: '#d2d2d7', textStyle: { color: '#1d1d1f' } },
+                grid: { left: '2%', right: '15%', bottom: '5%', top: '5%', containLabel: true },
                 xAxis: { type: 'value', show: false },
-                yAxis: { type: 'category', data: ['临时费', 'VIP充值', '充电费', '罚金'], axisLabel: { color: '#fff', fontSize: 10 }, axisLine: { show: false }, axisTick: { show: false } },
+                yAxis: { type: 'category', data: ['临时费', 'VIP', '充电费', '其他'], axisLabel: { color: '#86868b', fontSize: 10 }, axisLine: { show: false }, axisTick: { show: false } },
                 series: [{
-                    type: 'bar', barWidth: '40%',
+                    type: 'bar', barWidth: '30%',
                     data: [4500, 2800, 1050, 300],
-                    itemStyle: {
-                        borderRadius: [0, 10, 10, 0],
-                        color: new echarts.graphic.LinearGradient(0,0,1,0, [{offset:0, color:'rgba(0,234,255,0.1)'}, {offset:1, color:'#00eaff'}])
-                    },
-                    label: { show: true, position: 'right', formatter: '¥{c}', color: '#ffeb7b', fontSize: 10 }
+                    itemStyle: { borderRadius: [0, 4, 4, 0], color: '#1d1d1f' },
+                    label: { show: true, position: 'right', formatter: '¥{c}', color: '#1d1d1f', fontSize: 10 }
                 }]
             });
         }
 
         function renderLots(names, usages) {
             cLots.setOption({
-                tooltip: { trigger: 'axis', formatter: '{b}: {c}%', backgroundColor: 'rgba(0,0,0,0.8)', textStyle: { color: '#fff' } },
+                tooltip: { trigger: 'axis', backgroundColor: '#fff', borderColor: '#d2d2d7', textStyle: { color: '#1d1d1f' } },
                 grid: { left: '2%', right: '15%', bottom: '5%', top: '10%', containLabel: true },
                 xAxis: { type: 'value', max: 100, splitLine: { show: false }, axisLabel: { show: false } },
-                yAxis: { type: 'category', data: names, axisLabel: { color: '#fff', fontSize: 10 }, axisLine: { show: false }, axisTick: { show: false } },
+                yAxis: { type: 'category', data: names, axisLabel: { color: '#86868b', fontSize: 10 }, axisLine: { show: false }, axisTick: { show: false } },
                 series: [{
-                    type: 'bar', data: usages, barWidth: '35%',
-                    itemStyle: {
-                        borderRadius: [0, 10, 10, 0],
-                        color: function(p) { return p.value > 85 ? '#ff4683' : '#00eaff'; }
-                    },
-                    label: { show: true, position: 'right', formatter: '{c}%', color: '#fff', fontSize: 10 }
+                    type: 'bar', data: usages, barWidth: '30%',
+                    itemStyle: { borderRadius: [0, 4, 4, 0], color: function(p) { return p.value > 85 ? '#e3342f' : '#d2d2d7'; } },
+                    label: { show: true, position: 'right', formatter: '{c}%', color: '#1d1d1f', fontSize: 10 }
                 }]
             });
         }
@@ -403,20 +257,17 @@
         function renderList(records) {
             const ul = document.getElementById('realtime-list');
             ul.innerHTML = '';
-            // 双倍数据实现无缝滚动
             [...records, ...records, ...records].forEach(item => {
                 const isOut = item.type === 'out';
                 ul.innerHTML += `
-                    <li class="scroll-item ${isOut ? 'out' : ''}">
-                        <div><i class="fa-solid fa-camera-retro" style="color:#8cb6f5;"></i> <span class="s-plate">${item.plate}</span></div>
+                    <li class="scroll-item">
+                        <div><i class="fa-solid fa-camera" style="color:var(--text-muted); margin-right:8px;"></i> <span class="s-plate">${item.plate}</span></div>
                         <div class="s-time">${item.time}</div>
-                        <div class="s-tag ${isOut ? 'out' : 'in'}">${isOut ? '结算放行' : '正常入场'}</div>
                     </li>
                 `;
             });
         }
 
-        // 5. 数据拉取与降级兜底引擎
         const mockDb = {
             tHours: Array.from({length:24}, (_,i)=>`${i}:00`),
             tVols: [15, 10, 5, 2, 8, 30, 80, 150, 180, 120, 90, 85, 95, 110, 130, 190, 220, 160, 100, 70, 50, 30, 20, 18],
@@ -426,28 +277,24 @@
         };
 
         async function fetchAllData() {
-            // KPI
             try { const s = await (await fetch(`${API_BASE}/statistics`)).json(); document.getElementById('val-revenue').innerText = s.total_revenue.toFixed(2); document.getElementById('val-vehicles').innerText = s.records; } 
             catch(e) { document.getElementById('val-revenue').innerText = "8,650.00"; document.getElementById('val-vehicles').innerText = "1245"; }
 
-            // Traffic
             try { const p = await (await fetch(`${API_BASE}/predict`)).json(); renderTraffic(p.map(x=>x.hour+":00"), p.map(x=>x.predicted_cars)); } 
             catch(e) { renderTraffic(mockDb.tHours, mockDb.tVols); }
 
-            // Lots
             try {
                 const lots = await (await fetch(`${API_BASE}/lots`)).json(); let total = 0, names = [], usg = [];
                 lots.forEach(l => { total += l.available_spaces; names.push(l.name.substring(0,6)); usg.push(Math.round(((l.total_spaces - l.available_spaces)/l.total_spaces)*100)); });
                 document.getElementById('val-spaces').innerText = total; renderLots(names.reverse(), usg.reverse());
             } catch(e) { document.getElementById('val-spaces').innerText = "86"; renderLots(mockDb.lNames.reverse(), mockDb.lUsg.reverse()); }
 
-            // List
             try {
                 const r = await (await fetch(`${API_BASE}/records`)).json();
                 renderList(r.slice(-5).reverse().map(i => ({ plate: `U-${i.user_id} 车辆`, time: new Date(i.enter_time).toLocaleTimeString(), type: i.leave_time ? 'out' : 'in' })));
             } catch(e) { renderList(mockDb.recs); }
 
-            renderRevenue(); // 固定渲染饼图和条形图
+            renderRevenue();
         }
 
         fetchAllData(); setInterval(fetchAllData, 15000);
