@@ -39,6 +39,7 @@
             --radius-lg: 16px;
             --shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
             --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.03);
+            --drawer-width: 380px;
         }
 
         body { margin: 0; padding: 0; background: var(--bg-color); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
@@ -56,9 +57,9 @@
         .nav-item:hover, .nav-item.active { color: var(--text-main); background: #f5f5f7; border-left: 3px solid var(--text-main); }
         .nav-item i { font-size: 16px; width: 20px; text-align: center; }
         
-        .main-content { flex: 1; padding: 40px; position: relative; overflow-y: auto; }
-        .page { display: none; animation: fadeIn 0.3s ease; }
-        .page.active { display: block; }
+        .main-content { flex: 1; padding: 40px; position: relative; overflow-y: auto; overflow-x: hidden; }
+        .page { display: none; animation: fadeIn 0.3s ease; flex-direction: column; }
+        .page.active { display: flex; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
         .page-header { border-bottom: 1px solid var(--border); padding-bottom: 24px; margin-bottom: 32px; display: flex; justify-content: space-between; align-items: flex-end; }
@@ -85,12 +86,6 @@
         .data-table tr:last-child td { border-bottom: none; }
         .data-table tr:hover td { background: #fbfbfd; }
         
-        .parking-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 16px; }
-        .spot { height: 120px; border-radius: var(--radius); border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 14px; position: relative; transition: all 0.2s; background: var(--surface); }
-        .spot.free { color: var(--text-muted); }
-        .spot.occupied { background: var(--text-main); color: #fff; border-color: var(--text-main); }
-        .spot i { font-size: 24px; margin-bottom: 12px; }
-        
         .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; display: inline-block; }
         .status-badge.in { background: var(--success-bg); color: var(--success); }
         .status-badge.out { background: #f5f5f7; color: var(--text-muted); }
@@ -112,8 +107,24 @@
         .c-border { border-left: 1px dashed var(--border); padding-left: 24px; text-align: center; color: var(--text-main); }
         
         .chart-container { background: var(--surface); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 24px; height: 380px; box-shadow: var(--shadow-sm); }
-        
         .plate-tag { background: #f5f5f7; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); font-family: monospace; color: var(--text-main); font-weight: 600; }
+
+        /* ================= 新增：GIS 视图组件样式 ================= */
+        .gis-frame { position: relative; flex: 1; min-height: 500px; background: #fbfbfd; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); border: 1px solid var(--border-light); }
+        .view-switcher { position: absolute; top: 24px; left: 24px; z-index: 50; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px); padding: 4px; border-radius: 12px; display: flex; gap: 4px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
+        .view-btn { padding: 8px 16px; border: none; background: transparent; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
+        .view-btn.active { background: var(--primary); color: #fff; }
+        
+        .detail-drawer { position: absolute; right: -var(--drawer-width); top: 0; width: var(--drawer-width); height: 100%; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(30px); border-left: 1px solid var(--border-light); z-index: 100; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); padding: 40px; box-sizing: border-box; box-shadow: -20px 0 60px rgba(0,0,0,0.05); }
+        .detail-drawer.active { right: 0; }
+        .drawer-close { position: absolute; top: 32px; right: 32px; font-size: 20px; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
+        .drawer-close:hover { color: var(--text-main); }
+        .drawer-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.5px; margin-top: 10px; }
+        .drawer-subtitle { color: var(--text-muted); font-size: 13px; margin-bottom: 32px; word-break: break-all; }
+        .info-card { margin-bottom: 24px; }
+        .info-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
+        .info-value { font-size: 15px; color: var(--text-main); font-weight: 500; }
+        /* ========================================================= */
 
         @media (max-width: 768px) {
             .app-container { flex-direction: column; }
@@ -125,6 +136,7 @@
             .main-content { padding: 20px; }
             .control-panel { flex-direction: column; align-items: stretch; }
             .data-table-wrapper { overflow-x: auto; }
+            .detail-drawer { width: 100%; right: -100%; }
         }
     </style>
 </head>
@@ -134,7 +146,7 @@
             <div class="logo"><i class="fa-solid fa-cube"></i> SMART PARKING</div>
             
             <div class="nav-group">基础运管</div>
-            <div class="nav-item active" onclick="switchPage('page-map', this)"><i class="fa-solid fa-map"></i> 车位全景视图</div>
+            <div class="nav-item active" onclick="switchPage('page-map', this)"><i class="fa-solid fa-earth-asia"></i> 城市资源云图</div>
             <div class="nav-item" onclick="switchPage('page-records', this)"><i class="fa-solid fa-list"></i> 车辆放行与记录</div>
             <div class="nav-item" onclick="switchPage('page-users', this)"><i class="fa-regular fa-id-card"></i> 白名单资质管理</div>
             <div class="nav-item" onclick="switchPage('page-lots', this)"><i class="fa-regular fa-building"></i> 车场网络与计费</div>
@@ -153,10 +165,29 @@
             
             <div id="page-map" class="page active">
                 <div class="page-header">
-                    <h2><i class="fa-solid fa-map"></i> 全景云图</h2>
-                    <div style="color: var(--text-muted); font-size: 14px;">当前空余: <span id="free-count" style="color:var(--text-main); font-size: 24px; font-weight: 600; margin: 0 8px;">--</span> 席</div>
+                    <h2><i class="fa-solid fa-earth-asia"></i> 城市资产数字孪生中枢</h2>
+                    <button class="btn-outline" onclick="loadMapData()"><i class="fa-solid fa-rotate-right"></i> 手动同步接口</button>
                 </div>
-                <div class="parking-grid" id="parking-grid"></div>
+                
+                <div class="gis-frame">
+                    <div class="view-switcher">
+                        <button class="view-btn active" onclick="changeGISView('occupancy', this)">实时饱和度</button>
+                        <button class="view-btn" onclick="changeGISView('battery', this)">新能源充电</button>
+                        <button class="view-btn" onclick="changeGISView('nobarry', this)">无障碍专栏</button>
+                    </div>
+
+                    <div id="gis-map-container" style="width: 100%; height: 100%;"></div>
+
+                    <div id="detail-drawer" class="detail-drawer">
+                        <div class="drawer-close" onclick="closeDrawer()"><i class="fa-solid fa-xmark"></i></div>
+                        <div id="drawer-body">
+                            <div style="text-align: center; color: var(--text-muted); margin-top: 150px;">
+                                <i class="fa-solid fa-hand-pointer fa-2x"></i>
+                                <p style="margin-top: 16px;">点击地图节点调取深度档案</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div id="page-records" class="page">
@@ -339,7 +370,7 @@
         const API_BASE = 'http://127.0.0.1:8000';
 
         // =========================================
-        // 核心路由控制
+        // 核心路由控制 (保持原有不变，适配 GIS 初始化)
         // =========================================
         function switchPage(pageId, element) {
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -347,6 +378,8 @@
             element.classList.add('active');
             document.getElementById(pageId).classList.add('active');
 
+            // 触发对应页面的加载逻辑
+            if(pageId === 'page-map') { if(gisChartInstance) gisChartInstance.resize(); }
             if(pageId === 'page-records') loadRecords();
             if(pageId === 'page-users') loadCarOwners(); 
             if(pageId === 'page-lots') loadLots(); 
@@ -357,28 +390,152 @@
         }
 
         // =========================================
-        // 原有基础功能完整保留
+        // 【新增部分】GIS 数字孪生渲染引擎
         // =========================================
-        function renderMap() {
-            const grid = document.getElementById('parking-grid');
-            if(!grid) return;
-            grid.innerHTML = '';
-            let freeCount = 0;
-            const totalSpots = 40; 
-            for (let i = 1; i <= totalSpots; i++) {
-                const isOccupied = Math.random() > 0.6; 
-                const spotDiv = document.createElement('div');
-                spotDiv.className = `spot ${isOccupied ? 'occupied' : 'free'}`;
-                if (isOccupied) {
-                    spotDiv.innerHTML = `<i class="fa-solid fa-car"></i><span>A-${i.toString().padStart(3, '0')}</span>`;
-                } else {
-                    freeCount++;
-                    spotDiv.innerHTML = `<i class="fa-solid fa-square-parking" style="opacity:0.3"></i><span>A-${i.toString().padStart(3, '0')}</span>`;
+        let gisChartInstance = null;
+        let gisNodesData = [];
+        let activeMetric = 'occupancy';
+
+        function initGIS() {
+            const container = document.getElementById('gis-map-container');
+            if(!container) return;
+            gisChartInstance = echarts.init(container);
+            
+            // 绑定下钻事件
+            gisChartInstance.on('click', function(params) {
+                if(params.data && params.data.raw) {
+                    openDrawer(params.data.raw);
                 }
-                grid.appendChild(spotDiv);
-            }
-            document.getElementById('free-count').innerText = freeCount;
+            });
+            
+            loadMapData();
         }
+
+        async function loadMapData() {
+            if(gisChartInstance) gisChartInstance.showLoading({text: '同步真实接口数据...', color: '#0071e3', maskColor: 'rgba(251,251,253,0.8)'});
+            try {
+                // 请求 Python 后端 /gis_map (由 AI 和 XML 接口驱动)
+                const response = await fetch(`${API_BASE}/gis_map`);
+                gisNodesData = await response.json();
+                renderGIS();
+            } catch (e) {
+                console.error("无法加载 GIS 数据:", e);
+                // 提供本地容错展示
+                gisNodesData = [{name: '接口断开(离线模式)', location: [121.47, 31.23], occupancy_rate: 0, status: 'green'}];
+                renderGIS();
+            }
+            if(gisChartInstance) gisChartInstance.hideLoading();
+        }
+
+        function renderGIS() {
+            if(!gisChartInstance) return;
+
+            const scatterData = gisNodesData.map(node => {
+                let weight = node.occupancy_rate || 10; 
+                let color = '#34c759'; // green
+
+                if(activeMetric === 'occupancy') {
+                    if(node.status === 'yellow') color = '#f5a623';
+                    if(node.status === 'red') color = '#e3342f';
+                } else if (activeMetric === 'battery') {
+                    weight = node.battery_berth ? (node.battery_berth * 5) : 0;
+                    color = '#0071e3';
+                } else if (activeMetric === 'nobarry') {
+                    weight = node.nobarry_berth ? (node.nobarry_berth * 20) : 0;
+                    color = '#86868b';
+                }
+
+                return {
+                    name: node.name,
+                    value: [node.location ? node.location[0] : node.lng, node.location ? node.location[1] : node.lat, weight],
+                    raw: node,
+                    itemStyle: { color: color, shadowBlur: 15, shadowColor: 'rgba(0,0,0,0.1)' }
+                };
+            });
+
+            const option = {
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'item', backgroundColor: 'rgba(255,255,255,0.9)', borderColor: 'transparent',
+                    textStyle: {color: '#1d1d1f'}, padding: 12,
+                    formatter: p => `<div style="font-weight:600">${p.name}</div><div style="font-size:12px; color:#86868b">点击查看深度资产档案</div>`
+                },
+                xAxis: { type: 'value', min: 121.35, max: 121.65, show: false },
+                yAxis: { type: 'value', min: 31.15, max: 31.35, show: false },
+                series: [{
+                    type: 'effectScatter',
+                    coordinateSystem: 'cartesian2d',
+                    data: scatterData,
+                    symbolSize: val => Math.max(8, Math.sqrt(val[2]) * 2.5),
+                    showEffectOn: 'render',
+                    rippleEffect: { brushType: 'stroke', scale: 3 },
+                    label: { show: false }
+                }]
+            };
+            gisChartInstance.setOption(option);
+        }
+
+        function changeGISView(metric, btn) {
+            activeMetric = metric;
+            document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderGIS();
+        }
+
+        function openDrawer(data) {
+            const drawer = document.getElementById('detail-drawer');
+            const body = document.getElementById('drawer-body');
+            
+            // 数据容错处理
+            const company = data.company || data.company_manage || '上海公共资源管理中心';
+            const phone = data.phone || data.complained_tel || '021-12345678';
+            const address = data.address || '地址同步中...';
+            const statusColor = data.status === 'red' ? 'var(--danger)' : (data.status === 'yellow' ? 'var(--warning)' : 'var(--success)');
+
+            body.innerHTML = `
+                <div class="drawer-title">${data.name}</div>
+                <div class="drawer-subtitle">系统内部 ID: ${data.id} <br> ${address}</div>
+                
+                <div class="info-card">
+                    <div class="info-label">运营权属单位</div>
+                    <div class="info-value">${company}</div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-label">AI 仿真分析 (当前负荷率)</div>
+                    <div class="info-value" style="color: ${statusColor}; font-size: 28px; font-weight: 600;">
+                        ${data.occupancy_rate}%
+                    </div>
+                    <div class="tag-pill tag-green" style="background:#f5f5f7; color:#1d1d1f; border:1px solid var(--border);">
+                        ${data.occupied_berth} / ${data.total || data.total_berth} 泊位已用
+                    </div>
+                </div>
+
+                <div class="info-card" style="margin-top: 32px;">
+                    <div class="info-label">基础设施配置</div>
+                    <div class="info-value" style="font-size: 14px; line-height: 2;">
+                        <i class="fa-solid fa-bolt" style="color:var(--accent); width:20px; text-align:center;"></i> 充电专区: <strong>${data.battery_berth || data.battery || 0}</strong> 席<br>
+                        <i class="fa-solid fa-wheelchair" style="color:var(--text-muted); width:20px; text-align:center;"></i> 无障碍关怀: <strong>${data.nobarry_berth || data.nobarry || 0}</strong> 席
+                    </div>
+                </div>
+
+                <div class="info-card" style="margin-top: 40px; border-top: 1px solid var(--border-light); padding-top: 24px;">
+                    <div class="info-label">调度与客诉热线</div>
+                    <div class="info-value"><i class="fa-solid fa-phone" style="margin-right:8px; color:var(--text-muted);"></i> ${phone}</div>
+                </div>
+
+                <button class="btn-action" style="width: 100%; justify-content:center; margin-top: 24px;" onclick="alert('指令已下发至边缘设备。')">
+                    下发远程调度指令
+                </button>
+            `;
+            drawer.classList.add('active');
+        }
+
+        function closeDrawer() { document.getElementById('detail-drawer').classList.remove('active'); }
+
+        // =========================================
+        // 【以下完全保留】您原有的所有核心业务逻辑
+        // =========================================
 
         function manualReleaseGate() {
             const plate = document.getElementById('manual-plate').value;
@@ -508,255 +665,116 @@
             try { const response = await fetch(`${API_BASE}/lots/${id}`, { method: 'DELETE' }); if (response.ok) loadLots(); else alert("下线失败。"); } catch (error) { alert("请求失败。"); }
         }
 
-
-        // ==========================================
-        // 1. 黑名单与风控逻辑
-        // ==========================================
-        let mockBlacklist = [
-            { id: 1, plate: "粤B·88888", reason: "连续违约", time: "2026-03-01", blocks: 3 },
-            { id: 2, plate: "鄂A·66666", reason: "套牌嫌疑", time: "2026-03-10", blocks: 1 }
-        ];
-
+        let mockBlacklist = [ { id: 1, plate: "粤B·88888", reason: "连续违约", time: "2026-03-01", blocks: 3 }, { id: 2, plate: "鄂A·66666", reason: "套牌嫌疑", time: "2026-03-10", blocks: 1 } ];
         function renderBlacklist() {
-            const tbody = document.getElementById('blacklist-tbody');
-            tbody.innerHTML = '';
+            const tbody = document.getElementById('blacklist-tbody'); tbody.innerHTML = '';
             mockBlacklist.forEach(item => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td style="color:var(--text-muted);">${item.time}</td>
-                        <td><span class="plate-tag" style="color:var(--danger); border-color:var(--danger-bg); background:var(--danger-bg);">${item.plate}</span></td>
-                        <td>${item.reason}</td>
-                        <td>拦截 <strong style="color:var(--text-main);">${item.blocks}</strong> 次</td>
-                        <td><button class="btn-edit" onclick="alert('已解除布控状态。');">解除</button></td>
-                    </tr>
-                `;
+                tbody.innerHTML += `<tr><td style="color:var(--text-muted);">${item.time}</td><td><span class="plate-tag" style="color:var(--danger); border-color:var(--danger-bg); background:var(--danger-bg);">${item.plate}</span></td><td>${item.reason}</td><td>拦截 <strong style="color:var(--text-main);">${item.blocks}</strong> 次</td><td><button class="btn-edit" onclick="alert('已解除布控状态。');">解除</button></td></tr>`;
             });
         }
 
         function addBlacklist() {
-            const plate = document.getElementById('blacklist-plate').value;
-            const reason = document.getElementById('blacklist-reason').value;
+            const plate = document.getElementById('blacklist-plate').value; const reason = document.getElementById('blacklist-reason').value;
             if(!plate || !reason) return alert("请填写完整信息。");
             mockBlacklist.unshift({ id: Date.now(), plate: plate, reason: reason, time: new Date().toISOString().split('T')[0], blocks: 0 });
-            document.getElementById('blacklist-plate').value = '';
-            document.getElementById('blacklist-reason').value = '';
-            renderBlacklist();
-            alert(`已布控拦截 [${plate}]。`);
+            document.getElementById('blacklist-plate').value = ''; document.getElementById('blacklist-reason').value = ''; renderBlacklist(); alert(`已布控拦截 [${plate}]。`);
         }
 
-        function scanZombies() {
-            alert("执行扫描中...\n\n发现 2 辆异常驻留车辆，已标红并发送提醒。");
-        }
+        function scanZombies() { alert("执行扫描中...\n\n发现 2 辆异常驻留车辆，已标红并发送提醒。"); }
 
-        // ==========================================
-        // 2. 新能源充电协同逻辑
-        // ==========================================
         function initEV() {
-            const evGrid = document.getElementById('ev-grid');
-            evGrid.innerHTML = '';
-            const spots = [
-                { id: "E-01", status: "charging", level: 45, car: "粤B·D12345 (绿牌)" },
-                { id: "E-02", status: "free", level: 0, car: "空闲" },
-                { id: "E-03", status: "warning", level: 0, car: "粤B·88888 (蓝牌占位)" },
-                { id: "E-04", status: "full", level: 100, car: "粤A·D99999 (绿牌)" },
-                { id: "E-05", status: "charging", level: 82, car: "粤S·D55555 (绿牌)" },
-                { id: "E-06", status: "charging", level: 12, car: "鄂A·D66666 (绿牌)" }
-            ];
-
+            const evGrid = document.getElementById('ev-grid'); evGrid.innerHTML = '';
+            const spots = [ { id: "E-01", status: "charging", level: 45, car: "粤B·D12345 (绿牌)" }, { id: "E-02", status: "free", level: 0, car: "空闲" }, { id: "E-03", status: "warning", level: 0, car: "粤B·88888 (蓝牌占位)" }, { id: "E-04", status: "full", level: 100, car: "粤A·D99999 (绿牌)" }, { id: "E-05", status: "charging", level: 82, car: "粤S·D55555 (绿牌)" }, { id: "E-06", status: "charging", level: 12, car: "鄂A·D66666 (绿牌)" } ];
             spots.forEach(spot => {
-                let badge = `<span style="color:var(--success); font-weight:500;">桩位空闲</span>`;
-                let iconClass = 'fa-circle-check';
-                let iconColor = 'var(--success)';
-                let cls = 'ev-spot';
-
+                let badge = `<span style="color:var(--success); font-weight:500;">桩位空闲</span>`; let iconClass = 'fa-circle-check'; let iconColor = 'var(--success)'; let cls = 'ev-spot';
                 if(spot.status === 'charging') { badge = `<span style="color:var(--accent); font-weight:500;">快充中 ${spot.level}%</span>`; iconClass = 'fa-bolt'; iconColor = 'var(--accent)'; cls = 'ev-spot charging'; }
                 if(spot.status === 'warning') { badge = `<span style="color:var(--danger); font-weight:500;">非法占位</span>`; iconClass = 'fa-triangle-exclamation'; iconColor = 'var(--danger)'; cls = 'ev-spot warning'; }
                 if(spot.status === 'full') { badge = `<span style="color:var(--text-main); font-weight:500;">充电完成</span>`; iconClass = 'fa-check'; iconColor = 'var(--text-main)'; cls = 'ev-spot'; }
-
-                evGrid.innerHTML += `
-                    <div class="${cls}">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-weight:600; font-size:16px;">${spot.id} 终端</span>
-                            <i class="fa-solid ${iconClass}" style="color:${iconColor};"></i>
-                        </div>
-                        <div class="battery"><div class="battery-level" style="width:${spot.level}%;"></div></div>
-                        <div style="font-size:13px; margin-bottom:8px;">${badge}</div>
-                        <div style="font-size:13px; color:var(--text-muted);">${spot.car}</div>
-                        ${spot.status === 'warning' || spot.status === 'full' ? `<button class="btn-danger" style="width:100%; margin-top:16px;" onclick="alert('已发送提醒并开启占位计费。')">催促挪车</button>` : ''}
-                    </div>
-                `;
+                evGrid.innerHTML += `<div class="${cls}"><div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-weight:600; font-size:16px;">${spot.id} 终端</span><i class="fa-solid ${iconClass}" style="color:${iconColor};"></i></div><div class="battery"><div class="battery-level" style="width:${spot.level}%;"></div></div><div style="font-size:13px; margin-bottom:8px;">${badge}</div><div style="font-size:13px; color:var(--text-muted);">${spot.car}</div>${spot.status === 'warning' || spot.status === 'full' ? `<button class="btn-danger" style="width:100%; margin-top:16px;" onclick="alert('已发送提醒并开启占位计费。')">催促挪车</button>` : ''}</div>`;
             });
         }
 
-        // ==========================================
-        // 3. 商户优惠券逻辑
-        // ==========================================
-        let mockCoupons = [
-            { merchant: "高级餐饮 (A区)", type: "停车费立减 10 元", code: "HDF-90X2" }
-        ];
-
+        let mockCoupons = [ { merchant: "高级餐饮 (A区)", type: "停车费立减 10 元", code: "HDF-90X2" } ];
         function renderCoupons() {
-            const grid = document.getElementById('coupon-grid');
-            grid.innerHTML = '';
-            mockCoupons.forEach(c => {
-                grid.innerHTML += `
-                    <div class="coupon-card">
-                        <div>
-                            <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">发行主体</div>
-                            <div style="font-weight:600; font-size:16px; margin-bottom:12px;">${c.merchant}</div>
-                            <div style="font-size:13px; font-weight:500;"><i class="fa-regular fa-circle-check" style="margin-right:6px;"></i>${c.type}</div>
-                        </div>
-                        <div class="c-border">
-                            <i class="fa-solid fa-qrcode" style="font-size: 32px; margin-bottom:8px;"></i>
-                            <div style="font-family:monospace; font-size:12px; font-weight:600;">${c.code}</div>
-                        </div>
-                    </div>
-                `;
-            });
+            const grid = document.getElementById('coupon-grid'); grid.innerHTML = '';
+            mockCoupons.forEach(c => { grid.innerHTML += `<div class="coupon-card"><div><div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">发行主体</div><div style="font-weight:600; font-size:16px; margin-bottom:12px;">${c.merchant}</div><div style="font-size:13px; font-weight:500;"><i class="fa-regular fa-circle-check" style="margin-right:6px;"></i>${c.type}</div></div><div class="c-border"><i class="fa-solid fa-qrcode" style="font-size: 32px; margin-bottom:8px;"></i><div style="font-family:monospace; font-size:12px; font-weight:600;">${c.code}</div></div></div>`; });
         }
-
         function generateCoupon() {
-            const merchant = document.getElementById('coupon-merchant').value;
-            const type = document.getElementById('coupon-type').value;
-            const code = "CPN-" + Math.floor(Math.random()*10000);
-            mockCoupons.unshift({ merchant, type, code });
-            renderCoupons();
-            alert("卡券配置成功，已下发。");
+            const merchant = document.getElementById('coupon-merchant').value; const type = document.getElementById('coupon-type').value; const code = "CPN-" + Math.floor(Math.random()*10000);
+            mockCoupons.unshift({ merchant, type, code }); renderCoupons(); alert("卡券配置成功，已下发。");
         }
 
-
-        // ==========================================
-        // 4. AI 预测与对话舱逻辑
-        // ==========================================
-        let aiPredictChartInstance = null;
-        let chatHistory = []; 
-
+        let aiPredictChartInstance = null; let chatHistory = []; 
         async function loadAIAndFinance() {
+            try { const statsRes = await fetch(`${API_BASE}/statistics`); const stats = await statsRes.json(); document.getElementById('stat-revenue').innerText = `¥ ${stats.total_revenue.toFixed(2)}`; document.getElementById('stat-duration').innerText = `${stats.avg_parking_time.toFixed(2)} h`; document.getElementById('stat-records').innerText = stats.records; } catch (error) { console.error("数据拉取失败"); }
+            let peakHour = 18; let maxVolume = 120; 
             try {
-                const statsRes = await fetch(`${API_BASE}/statistics`);
-                const stats = await statsRes.json();
-                document.getElementById('stat-revenue').innerText = `¥ ${stats.total_revenue.toFixed(2)}`;
-                document.getElementById('stat-duration').innerText = `${stats.avg_parking_time.toFixed(2)} h`;
-                document.getElementById('stat-records').innerText = stats.records;
-            } catch (error) { console.error("数据拉取失败"); }
-
-            let peakHour = 18; 
-            let maxVolume = 120; 
-
-            try {
-                const predRes = await fetch(`${API_BASE}/predict`);
-                if (!predRes.ok) throw new Error("模型未响应");
-                const predictions = await predRes.json();
-                const hours = predictions.map(p => `${p.hour}:00`);
-                const carVolumes = predictions.map(p => p.predicted_cars);
-
-                maxVolume = -1;
-                predictions.forEach(p => {
-                    if(p.predicted_cars > maxVolume) {
-                        maxVolume = p.predicted_cars;
-                        peakHour = p.hour;
-                    }
-                });
+                const predRes = await fetch(`${API_BASE}/predict`); if (!predRes.ok) throw new Error("模型未响应"); const predictions = await predRes.json();
+                const hours = predictions.map(p => `${p.hour}:00`); const carVolumes = predictions.map(p => p.predicted_cars); maxVolume = -1;
+                predictions.forEach(p => { if(p.predicted_cars > maxVolume) { maxVolume = p.predicted_cars; peakHour = p.hour; } });
                 renderAIPredictChart(hours, carVolumes);
             } catch (error) {
-                const mockHours = Array.from({length: 24}, (_, i) => `${i}:00`);
-                const mockVolumes = [12, 8, 5, 3, 2, 8, 25, 60, 110, 85, 60, 50, 45, 55, 60, 75, 115, 145, 120, 80, 50, 30, 20, 15];
-                peakHour = 17; maxVolume = 145;
-                renderAIPredictChart(mockHours, mockVolumes);
+                const mockHours = Array.from({length: 24}, (_, i) => `${i}:00`); const mockVolumes = [12, 8, 5, 3, 2, 8, 25, 60, 110, 85, 60, 50, 45, 55, 60, 75, 115, 145, 120, 80, 50, 30, 20, 15];
+                peakHour = 17; maxVolume = 145; renderAIPredictChart(mockHours, mockVolumes);
             }
-
             generateAIAdvice(peakHour, maxVolume);
         }
 
         function renderAIPredictChart(hours, data) {
-            const chartDom = document.getElementById('aiPredictChart');
-            if(!chartDom) return;
+            const chartDom = document.getElementById('aiPredictChart'); if(!chartDom) return;
             if(!aiPredictChartInstance) aiPredictChartInstance = echarts.init(chartDom);
-            const option = {
+            aiPredictChartInstance.setOption({
                 tooltip: { trigger: 'axis', axisPointer: { type: 'line', lineStyle: { color: '#d2d2d7' } } },
                 grid: { left: '0%', right: '2%', bottom: '0%', top: '10%', containLabel: true },
                 xAxis: [ { type: 'category', boundaryGap: false, data: hours, axisLabel: { color: '#86868b' }, axisLine: { lineStyle: { color: '#d2d2d7' } } } ],
                 yAxis: [ { type: 'value', axisLabel: { color: '#86868b' }, splitLine: { lineStyle: { color: '#f5f5f7' } } } ],
-                series: [ { 
-                    type: 'line', smooth: true, showSymbol: false,
-                    lineStyle: { width: 3, color: '#1d1d1f' }, 
-                    areaStyle: { color: 'rgba(29, 29, 31, 0.05)' },
-                    data: data 
-                } ]
-            };
-            aiPredictChartInstance.setOption(option);
+                series: [ { type: 'line', smooth: true, showSymbol: false, lineStyle: { width: 3, color: '#1d1d1f' }, areaStyle: { color: 'rgba(29, 29, 31, 0.05)' }, data: data } ]
+            });
         }
 
         async function generateAIAdvice(peakHour, maxVolume) {
             const chatWindow = document.getElementById('ai-chat-window');
             chatWindow.innerHTML = `<div style="color:var(--text-muted); text-align:center; padding:20px; font-size:14px;"><i class="fa-solid fa-spinner fa-spin"></i> 请求云端大模型...</div>`;
             try {
-                const response = await fetch(`${API_BASE}/ai_advice`, { 
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ peak_hour: peakHour, max_volume: maxVolume }) 
-                });
+                const response = await fetch(`${API_BASE}/ai_advice`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ peak_hour: peakHour, max_volume: maxVolume }) });
                 const data = await response.json();
-                
-                chatHistory = [
-                    { role: 'user', text: `系统监测到今日 ${peakHour}:00 将达到峰值（预计 ${maxVolume} 辆车）。请给出策略。` },
-                    { role: 'model', text: data.advice }
-                ];
-                renderChatBox();
-            } catch (error) { 
-                chatWindow.innerHTML = '<span style="color:var(--danger); font-size:14px; display:block; text-align:center; padding:20px;">大模型连线超时。</span>'; 
-            }
+                chatHistory = [ { role: 'user', text: `系统监测到今日 ${peakHour}:00 将达到峰值（预计 ${maxVolume} 辆车）。请给出策略。` }, { role: 'model', text: data.advice } ]; renderChatBox();
+            } catch (error) { chatWindow.innerHTML = '<span style="color:var(--danger); font-size:14px; display:block; text-align:center; padding:20px;">大模型连线超时。</span>'; }
         }
 
         function renderChatBox() {
-            const chatWindow = document.getElementById('ai-chat-window');
-            let html = '';
+            const chatWindow = document.getElementById('ai-chat-window'); let html = '';
             chatHistory.forEach((msg, index) => {
                 if (index === 0 && msg.role === 'user') return; 
-                if (msg.role === 'model') {
-                    html += `<div style="margin-bottom:16px; padding:16px; background:#f5f5f7; border-radius:12px 12px 12px 0; color:var(--text-main); line-height:1.6; font-size:14px;"><div style="margin-bottom:6px; font-size:12px; color:var(--text-muted); font-weight:600;"><i class="fa-solid fa-robot"></i> 智能助手</div>${msg.text}</div>`;
-                } else {
-                    html += `<div style="margin-bottom:16px; padding:16px; background:var(--primary); color:#fff; border-radius:12px 12px 0 12px; line-height:1.6; font-size:14px; margin-left:20%;"><div style="margin-bottom:6px; font-size:12px; color:rgba(255,255,255,0.7); font-weight:600; text-align:right;">操作员</div>${msg.text}</div>`;
-                }
+                if (msg.role === 'model') { html += `<div style="margin-bottom:16px; padding:16px; background:#f5f5f7; border-radius:12px 12px 12px 0; color:var(--text-main); line-height:1.6; font-size:14px;"><div style="margin-bottom:6px; font-size:12px; color:var(--text-muted); font-weight:600;"><i class="fa-solid fa-robot"></i> 智能助手</div>${msg.text}</div>`; } 
+                else { html += `<div style="margin-bottom:16px; padding:16px; background:var(--primary); color:#fff; border-radius:12px 12px 0 12px; line-height:1.6; font-size:14px; margin-left:20%;"><div style="margin-bottom:6px; font-size:12px; color:rgba(255,255,255,0.7); font-weight:600; text-align:right;">操作员</div>${msg.text}</div>`; }
             });
-            chatWindow.innerHTML = html;
-            chatWindow.scrollTop = chatWindow.scrollHeight;
+            chatWindow.innerHTML = html; chatWindow.scrollTop = chatWindow.scrollHeight;
         }
 
         async function sendChatMessage() {
-            const inputDom = document.getElementById('ai-chat-input');
-            const text = inputDom.value.trim(); 
-            if (!text) return;
-            
-            chatHistory.push({ role: 'user', text: text });
-            inputDom.value = ''; 
-            renderChatBox();
-            
-            const chatWindow = document.getElementById('ai-chat-window');
-            const typingId = 'typing-' + Date.now();
-            chatWindow.innerHTML += `<div id="${typingId}" style="margin-bottom:16px; padding:16px; color:var(--text-muted); font-size:13px; background:#f5f5f7; border-radius:12px 12px 12px 0; width:fit-content;"><i class="fa-solid fa-ellipsis fa-fade"></i></div>`;
-            chatWindow.scrollTop = chatWindow.scrollHeight;
-
+            const inputDom = document.getElementById('ai-chat-input'); const text = inputDom.value.trim(); if (!text) return;
+            chatHistory.push({ role: 'user', text: text }); inputDom.value = ''; renderChatBox();
+            const chatWindow = document.getElementById('ai-chat-window'); const typingId = 'typing-' + Date.now();
+            chatWindow.innerHTML += `<div id="${typingId}" style="margin-bottom:16px; padding:16px; color:var(--text-muted); font-size:13px; background:#f5f5f7; border-radius:12px 12px 12px 0; width:fit-content;"><i class="fa-solid fa-ellipsis fa-fade"></i></div>`; chatWindow.scrollTop = chatWindow.scrollHeight;
             try {
                 const historyToSend = chatHistory.slice(0, -1);
-                const response = await fetch(`${API_BASE}/ai_chat`, { 
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ history: historyToSend, message: text }) 
-                });
-                const data = await response.json();
-                
-                document.getElementById(typingId).remove();
-                chatHistory.push({ role: 'model', text: data.reply });
-                renderChatBox();
-            } catch (error) { 
-                document.getElementById(typingId).innerHTML = `<span style="color:var(--danger);">网络错误。</span>`; 
-            }
+                const response = await fetch(`${API_BASE}/ai_chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ history: historyToSend, message: text }) });
+                const data = await response.json(); document.getElementById(typingId).remove(); chatHistory.push({ role: 'model', text: data.reply }); renderChatBox();
+            } catch (error) { document.getElementById(typingId).innerHTML = `<span style="color:var(--danger);">网络错误。</span>`; }
         }
 
-        window.addEventListener('resize', () => { if(aiPredictChartInstance) aiPredictChartInstance.resize(); });
+        // =========================================
+        // 系统初始化入口
+        // =========================================
+        window.addEventListener('resize', () => { 
+            if(aiPredictChartInstance) aiPredictChartInstance.resize(); 
+            if(gisChartInstance) gisChartInstance.resize();
+        });
         
         window.onload = () => {
-            renderMap();
-            setInterval(renderMap, 10000); 
+            initGIS();
+            setInterval(loadMapData, 30000); // GIS 每30秒同步一次
             if(document.getElementById('page-records').classList.contains('active')) loadRecords();
         };
     </script>
