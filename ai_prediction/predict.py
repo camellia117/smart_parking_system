@@ -5,33 +5,45 @@ import os
 import requests
 
 # 请把这里替换为你申请的百度地图 AK
-BAIDU_AK = "rOTvJe6VTInuQkUenZfTm1EGzm9PYoCq"  
+BAIDU_AK = "LoTLDU1fWyDkcoAoNiv5VkDj9JPAqeeW"  
 
 def get_real_weather():
     """
     调用百度地图API获取上海市实时天气，并转换为模型需要的数字编码
     """
-    # 310100 是上海市的行政区划代码
     url = f"https://api.map.baidu.com/weather/v1/?district_id=310100&data_type=now&ak={BAIDU_AK}"
     
+    # 1. 伪装身份：穿上 Google Chrome 浏览器的“马甲”，防止被百度防火墙踢掉
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+    
+    # 2. 绕过代理：强制直连国内网络，防止被本地的 Gemini 翻墙代理（如端口 7897）拦截报错
+    proxies = {
+        "http": None,
+        "https": None
+    }
+    
     try:
-        response = requests.get(url, timeout=5)
+        # 将 headers 和 proxies 一起传给 requests
+        response = requests.get(url, headers=headers, proxies=proxies, timeout=5)
         data = response.json()
         
-        if data.get("status") == 0: # 请求成功
+        if data.get("status") == 0:
             weather_text = data["result"]["now"]["text"]
-            print(f"当前上海真实天气: {weather_text}")
+            print(f"✅ 成功获取当前上海真实天气: {weather_text}")
             
-            # 【注意】：这里需要映射为你模型训练时的编码规则
-            # 假设你当时训练模型时：0代表晴天/多云/阴，1代表下雨/下雪
             if "雨" in weather_text or "雪" in weather_text or "暴" in weather_text:
                 return 1
             else:
                 return 0
+        else:
+            print(f"⚠️ 百度接口返回了错误信息: {data.get('message')}")
+            
     except Exception as e:
         print(f"⚠️ 天气接口请求失败，使用默认天气兜底。原因: {e}")
         
-    return 0  # 如果网络断开或请求失败，兜底返回 0
+    return 0
 
 def predict_day():
     """
