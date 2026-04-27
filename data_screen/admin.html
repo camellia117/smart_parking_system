@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>智慧停车后台管理云平台</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
-    <!-- 百度地图与 ECharts GIS 扩展 (优化新增) -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    
     <script src="https://api.map.baidu.com/api?v=3.0&ak=rOTvJe6VTInuQkUenZfTm1EGzm9PYoCq"></script>
-    <script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/extension/bmap.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/extension/bmap/bmap.min.js"></script>
 
     <script>
         const isAuth = localStorage.getItem("system_auth");
@@ -112,8 +113,25 @@
         .chart-container { background: var(--surface); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 24px; height: 380px; box-shadow: var(--shadow-sm); }
         .plate-tag { background: #f5f5f7; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); font-family: monospace; color: var(--text-main); font-weight: 600; }
 
-        /* ================= 新增：GIS 视图组件样式 ================= */
-        .gis-frame { position: relative; flex: 1; min-height: 500px; background: #fbfbfd; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); border: 1px solid var(--border-light); }
+        /* ================= 新增：GIS 视图组件样式 (彻底修复高度塌陷) ================= */
+        .gis-frame { 
+            position: relative; 
+            flex: 1; 
+            min-height: 600px; /* 强制给一个底线高度 */
+            background: #fbfbfd; 
+            border-radius: var(--radius-lg); 
+            overflow: hidden; 
+            box-shadow: var(--shadow-sm); 
+            border: 1px solid var(--border-light); 
+        }
+        /* 强制地图容器充满整个 frame，不允许高度变为0 */
+        #gis-map-container { 
+            position: absolute; 
+            top: 0; left: 0; right: 0; bottom: 0; 
+            width: 100%; height: 100%; 
+            z-index: 1;
+        }
+        
         .view-switcher { position: absolute; top: 24px; left: 24px; z-index: 50; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px); padding: 4px; border-radius: 12px; display: flex; gap: 4px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
         .view-btn { padding: 8px 16px; border: none; background: transparent; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
         .view-btn.active { background: var(--primary); color: #fff; }
@@ -127,11 +145,9 @@
         .info-card { margin-bottom: 24px; }
         .info-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
         .info-value { font-size: 15px; color: var(--text-main); font-weight: 500; }
-        /* ========================================================= */
-
-        /* 隐藏地图左下角版权标识让 UI 更干净 */
-        .BMap_cpyCtrl { display: none; }
-        .anchorBL { display: none; }
+        
+        /* 隐藏地图版权让UI更干净，必须加上 !important */
+        .BMap_cpyCtrl, .anchorBL { display: none !important; }
 
         @media (max-width: 768px) {
             .app-container { flex-direction: column; }
