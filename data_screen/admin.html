@@ -47,6 +47,7 @@
         .nav-item i { font-size: 16px; width: 20px; text-align: center; }
         
         .main-content { flex: 1; padding: 40px; position: relative; overflow-y: auto; overflow-x: hidden; }
+        /* 注意：这里的 fadeIn 动画会导致前 300ms 宽高不稳定 */
         .page { display: none; animation: fadeIn 0.3s ease; flex-direction: column; }
         .page.active { display: flex; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -108,6 +109,9 @@
             overflow: hidden; 
             box-shadow: var(--shadow-sm); 
             border: 1px solid var(--border-light); 
+            /* 确保内部容器有绝对参照物 */
+            display: flex;
+            flex-direction: column;
         }
         #gis-map-container { 
             position: absolute; 
@@ -116,17 +120,17 @@
             z-index: 1;
         }
         
-        /* 【布局调整】：视图切换按钮固定在右上角 */
+        /* 视图切换按钮（在右上方） */
         .view-switcher { position: absolute; top: 24px; right: 24px; z-index: 50; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); padding: 4px; border-radius: 12px; display: flex; gap: 4px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
         .view-btn { padding: 8px 16px; border: none; background: transparent; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
         .view-btn.active { background: var(--primary); color: #fff; }
 
-        /* 【布局调整】：缩放按钮固定在右下角 */
+        /* 缩放按钮（在右下方） */
         .zoom-controls { position: absolute; bottom: 24px; right: 24px; z-index: 50; display: flex; flex-direction: column; gap: 4px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); padding: 4px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
         .zoom-btn { width: 36px; height: 36px; border: none; background: transparent; border-radius: 8px; font-size: 16px; color: var(--text-main); cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
         .zoom-btn:hover { background: #f5f5f7; color: var(--accent); }
         
-        /* 【布局调整】：详情抽屉改为从【左侧】滑出，阴影反向 */
+        /* 详情抽屉（在左侧滑出） */
         .detail-drawer { position: absolute; left: -var(--drawer-width); top: 0; width: var(--drawer-width); height: 100%; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(30px); border-right: 1px solid var(--border-light); z-index: 100; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); padding: 40px; box-sizing: border-box; box-shadow: 20px 0 60px rgba(0,0,0,0.05); overflow-y: auto; }
         .detail-drawer.active { left: 0; }
         .drawer-close { position: absolute; top: 32px; right: 24px; font-size: 20px; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
@@ -137,13 +141,12 @@
         .info-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
         .info-value { font-size: 15px; color: var(--text-main); font-weight: 500; }
 
-        /* 【新增】：多方案可选折叠面板（手风琴）样式 */
+        /* 多方案可选折叠面板（手风琴） */
         .route-option { padding: 16px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s ease; background: #fff; }
         .route-option:hover { border-color: var(--accent); background: #fbfbfd; box-shadow: var(--shadow-sm); }
         .route-option-title { font-weight: 600; font-size: 15px; color: var(--text-main); margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;}
         .route-option-desc { font-size: 13px; color: var(--text-muted); }
         .route-detail-view { display: none; padding-top: 16px; margin-top: 16px; border-top: 1px dashed var(--border); font-size: 14px; color: var(--text-main); line-height: 1.6; animation: fadeIn 0.3s ease;}
-        /* 折叠面板的选中展开状态 */
         .route-option.expanded { border-color: var(--accent); background: #fbfbfd; box-shadow: var(--shadow-sm); border-left: 4px solid var(--accent); }
         .route-option.expanded .route-detail-view { display: block; }
         
@@ -295,9 +298,16 @@
             document.getElementById(pageId).classList.add('active');
 
             if(pageId === 'page-map') { 
-                if(gisChartInstance) {
-                    setTimeout(() => gisChartInstance.resize(), 100); 
-                } 
+                // 【核心核武器修复】：等待 CSS 的 fadeIn 动画（300ms）彻底完成后，再强制重绘地图
+                setTimeout(() => {
+                    if(gisChartInstance) {
+                        gisChartInstance.resize(); 
+                        const bmapModel = gisChartInstance.getModel().getComponent('bmap');
+                        if (bmapModel) {
+                            bmapModel.getBMap().checkResize(); // 强制百度地图底层重新索要瓦片
+                        }
+                    }
+                }, 350); 
             }
             if(pageId === 'page-records') loadRecords();
             if(pageId === 'page-users') loadCarOwners(); 
@@ -315,7 +325,7 @@
         let gisNodesData = [];
         let activeMetric = 'occupancy'; 
         let isGisInitialized = false; 
-        let currentSelectedNode = null; // 记录当前点击的停车场节点
+        let currentSelectedNode = null; 
 
         function initGIS() {
             const container = document.getElementById('gis-map-container');
@@ -323,11 +333,13 @@
             
             gisChartInstance = echarts.init(container);
             
-            // 【核心修复 1】：使用 ResizeObserver 监听容器尺寸变化
-            // 彻底解决 70% 截断和白屏留白问题
+            // 响应式监听
             const resizeObserver = new ResizeObserver(() => {
                 if (gisChartInstance) {
                     gisChartInstance.resize();
+                    // 防止拉伸时出现灰色
+                    const bmapModel = gisChartInstance.getModel().getComponent('bmap');
+                    if (bmapModel) bmapModel.getBMap().checkResize();
                 }
             });
             resizeObserver.observe(container);
@@ -341,17 +353,14 @@
             loadMapData();
         }
 
-        // 自定义缩放函数：挂载在右下角的 UI 按钮上
+        // 自定义缩放函数
         function customZoomMap(delta) {
             if(!gisChartInstance) return;
             const bmapModel = gisChartInstance.getModel().getComponent('bmap');
             if (bmapModel) {
                 const nativeMap = bmapModel.getBMap();
-                if (delta > 0) {
-                    nativeMap.zoomIn();
-                } else {
-                    nativeMap.zoomOut();
-                }
+                if (delta > 0) nativeMap.zoomIn();
+                else nativeMap.zoomOut();
             }
         }
 
@@ -390,7 +399,6 @@
                 let weight = node.occupancy_rate || 10; 
                 let color = '#34c759'; 
 
-                // 数据层点位颜色与左侧面板模式一致
                 if(activeMetric === 'occupancy') {
                     if(node.status === 'yellow') color = '#f5a623';
                     if(node.status === 'red') color = '#e3342f';
@@ -422,8 +430,7 @@
                     bmap: {
                         center: [121.485, 31.23], 
                         zoom: 13,
-                        // 【核心修复 2】：启用自由移动，禁用滚轮劫持
-                        roam: 'move', 
+                        roam: 'move', // 只允许平移，禁用原生滚轮
                         mapStyle: {
                             styleJson: [
                                 { "featureType": "water", "elementType": "all", "stylers": { "color": "#e0e4eb" } },
@@ -447,6 +454,14 @@
                 };
                 
                 gisChartInstance.setOption(option);
+                
+                // 【核心核武器修复】：第一遍渲染完强制引发一次全域 Resize
+                setTimeout(() => {
+                    gisChartInstance.resize();
+                    const bmapModel = gisChartInstance.getModel().getComponent('bmap');
+                    if (bmapModel) bmapModel.getBMap().checkResize();
+                }, 400);
+
                 isGisInitialized = true; 
             } else {
                 gisChartInstance.setOption({ series: [{ data: scatterData }] });
@@ -454,7 +469,7 @@
         }
 
         // =========================================
-        // 【核心交互联动】：右上角按钮与左侧详情框交互
+        // 右上角按钮与左侧详情框无缝交互
         // =========================================
         function changeGISView(metric, btn) {
             activeMetric = metric;
@@ -462,28 +477,24 @@
             btn.classList.add('active');
             renderGIS(); 
 
-            // 【核心修复 3】：点击右上角的出行按钮时，如果左侧框本来就是展开的，
-            // 则不关闭、不移位，直接原地刷新数据为对应模式的方案！
+            // 不关闭抽屉，直接原地刷新左侧方案
             const drawer = document.getElementById('detail-drawer');
             if (currentSelectedNode && drawer.classList.contains('active')) {
                 openDrawer(currentSelectedNode); 
             }
         }
 
-        // 折叠面板（Accordion）方案展开/收起控制
+        // 手风琴折叠方案
         function toggleRoute(element) {
             const isExpanded = element.classList.contains('expanded');
-            // 关闭所有方案，确保同一时间只展示一个详情
             document.querySelectorAll('.route-option').forEach(el => el.classList.remove('expanded'));
-            // 如果原本没有展开，则展开它
             if (!isExpanded) {
                 element.classList.add('expanded');
             }
         }
 
-        // 渲染左侧详情抽屉
         function openDrawer(data) {
-            currentSelectedNode = data; // 标记当前正在查看的节点
+            currentSelectedNode = data; 
             const drawer = document.getElementById('detail-drawer');
             const body = document.getElementById('drawer-body');
             
@@ -493,7 +504,6 @@
             
             let dynamicContentHtml = '';
 
-            // --- 模式 1：实时饱和度 ---
             if (activeMetric === 'occupancy') {
                 const statusColor = data.status === 'red' ? 'var(--danger)' : (data.status === 'yellow' ? 'var(--warning)' : 'var(--success)');
                 dynamicContentHtml = `
@@ -515,7 +525,6 @@
                     </div>
                 `;
             } 
-            // --- 模式 2：驾车出行 ---
             else if (activeMetric === 'drive') {
                 const randomDist = (Math.random() * 4 + 0.5).toFixed(1);
                 const randomMins = Math.floor(randomDist * 4 + 3);
@@ -552,7 +561,6 @@
                     </div>
                 `;
             }
-            // --- 模式 3：公交出行 ---
             else if (activeMetric === 'transit') {
                 const walkDistance = Math.floor(Math.random() * 400 + 100);
                 dynamicContentHtml = `
@@ -589,29 +597,23 @@
             body.innerHTML = `
                 <div class="drawer-title">${data.name}</div>
                 <div class="drawer-subtitle">系统内部 ID: ${data.id || 'SYS-DEFAULT'} <br> ${address}</div>
-                
-                <div class="info-card">
-                    <div class="info-label">运营权属单位</div>
-                    <div class="info-value">${company}</div>
-                </div>
-
+                <div class="info-card"><div class="info-label">运营权属单位</div><div class="info-value">${company}</div></div>
                 ${dynamicContentHtml}
-
                 <div class="info-card" style="margin-top: 40px; border-top: 1px solid var(--border-light); padding-top: 24px;">
                     <div class="info-label">调度与客诉热线</div>
                     <div class="info-value"><i class="fa-solid fa-phone" style="margin-right:8px; color:var(--text-muted);"></i> ${phone}</div>
                 </div>
             `;
-            drawer.classList.add('active'); // 弹出左侧抽屉
+            drawer.classList.add('active'); // 从左边滑出
         }
 
         function closeDrawer() { 
             document.getElementById('detail-drawer').classList.remove('active'); 
-            currentSelectedNode = null; // 清除当前焦点
+            currentSelectedNode = null; 
         }
 
         // =========================================
-        // 业务层 API 调用逻辑 (保持绝对完整)
+        // 业务层 API 调用逻辑 (所有功能完整保留)
         // =========================================
 
         function manualReleaseGate() {
@@ -842,14 +844,15 @@
         }
 
         // =========================================
-        // 初始化入口
+        // 系统初始化入口
         // =========================================
-        window.addEventListener('resize', () => { 
-            if(gisChartInstance) gisChartInstance.resize();
-        });
         
         window.onload = () => {
-            initGIS();
+            // 【核心核武器修复】：给页面 400ms 的时间，确保左侧边栏、主内容区以及CSS动画彻底完成，然后再去初始化地图。
+            setTimeout(() => {
+                initGIS();
+            }, 400);
+            
             if(document.getElementById('page-records').classList.contains('active')) loadRecords();
         };
     </script>
