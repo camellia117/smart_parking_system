@@ -98,7 +98,7 @@
         .chart-container { background: var(--surface); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 24px; height: 380px; box-shadow: var(--shadow-sm); }
         .plate-tag { background: #f5f5f7; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); font-family: monospace; color: var(--text-main); font-weight: 600; }
 
-        /* ================= GIS 视图组件样式 ================= */
+        /* ================= GIS 视图组件样式优化 ================= */
         .gis-frame { 
             position: relative; 
             flex: 1; 
@@ -116,21 +116,37 @@
             z-index: 1;
         }
         
-        .view-switcher { position: absolute; top: 24px; left: 24px; z-index: 50; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); padding: 4px; border-radius: 12px; display: flex; gap: 4px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
+        /* 【布局调整】：视图切换按钮固定在右上角 */
+        .view-switcher { position: absolute; top: 24px; right: 24px; z-index: 50; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); padding: 4px; border-radius: 12px; display: flex; gap: 4px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
         .view-btn { padding: 8px 16px; border: none; background: transparent; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
         .view-btn.active { background: var(--primary); color: #fff; }
+
+        /* 【布局调整】：缩放按钮固定在右下角 */
+        .zoom-controls { position: absolute; bottom: 24px; right: 24px; z-index: 50; display: flex; flex-direction: column; gap: 4px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); padding: 4px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
+        .zoom-btn { width: 36px; height: 36px; border: none; background: transparent; border-radius: 8px; font-size: 16px; color: var(--text-main); cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+        .zoom-btn:hover { background: #f5f5f7; color: var(--accent); }
         
-        .detail-drawer { position: absolute; right: -var(--drawer-width); top: 0; width: var(--drawer-width); height: 100%; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(30px); border-left: 1px solid var(--border-light); z-index: 100; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); padding: 40px; box-sizing: border-box; box-shadow: -20px 0 60px rgba(0,0,0,0.05); }
-        .detail-drawer.active { right: 0; }
-        .drawer-close { position: absolute; top: 32px; right: 32px; font-size: 20px; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
+        /* 【布局调整】：详情抽屉改为从【左侧】滑出，阴影反向 */
+        .detail-drawer { position: absolute; left: -var(--drawer-width); top: 0; width: var(--drawer-width); height: 100%; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(30px); border-right: 1px solid var(--border-light); z-index: 100; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); padding: 40px; box-sizing: border-box; box-shadow: 20px 0 60px rgba(0,0,0,0.05); overflow-y: auto; }
+        .detail-drawer.active { left: 0; }
+        .drawer-close { position: absolute; top: 32px; right: 24px; font-size: 20px; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
         .drawer-close:hover { color: var(--text-main); }
         .drawer-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.5px; margin-top: 10px; }
         .drawer-subtitle { color: var(--text-muted); font-size: 13px; margin-bottom: 32px; word-break: break-all; }
         .info-card { margin-bottom: 24px; }
         .info-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
         .info-value { font-size: 15px; color: var(--text-main); font-weight: 500; }
+
+        /* 【新增】：多方案可选折叠面板（手风琴）样式 */
+        .route-option { padding: 16px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s ease; background: #fff; }
+        .route-option:hover { border-color: var(--accent); background: #fbfbfd; box-shadow: var(--shadow-sm); }
+        .route-option-title { font-weight: 600; font-size: 15px; color: var(--text-main); margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;}
+        .route-option-desc { font-size: 13px; color: var(--text-muted); }
+        .route-detail-view { display: none; padding-top: 16px; margin-top: 16px; border-top: 1px dashed var(--border); font-size: 14px; color: var(--text-main); line-height: 1.6; animation: fadeIn 0.3s ease;}
+        /* 折叠面板的选中展开状态 */
+        .route-option.expanded { border-color: var(--accent); background: #fbfbfd; box-shadow: var(--shadow-sm); border-left: 4px solid var(--accent); }
+        .route-option.expanded .route-detail-view { display: block; }
         
-        /* 隐藏地图版权让UI更干净 */
         .BMap_cpyCtrl, .anchorBL { display: none !important; }
 
         @media (max-width: 768px) {
@@ -143,7 +159,7 @@
             .main-content { padding: 20px; }
             .control-panel { flex-direction: column; align-items: stretch; }
             .data-table-wrapper { overflow-x: auto; }
-            .detail-drawer { width: 100%; right: -100%; }
+            .detail-drawer { width: 100%; left: -100%; }
         }
     </style>
 </head>
@@ -179,11 +195,16 @@
                 <div class="gis-frame">
                     <div class="view-switcher">
                         <button class="view-btn active" onclick="changeGISView('occupancy', this)">实时饱和度</button>
-                        <button class="view-btn" onclick="changeGISView('battery', this)">新能源充电</button>
-                        <button class="view-btn" onclick="changeGISView('nobarry', this)">无障碍专栏</button>
+                        <button class="view-btn" onclick="changeGISView('drive', this)">驾车出行</button>
+                        <button class="view-btn" onclick="changeGISView('transit', this)">公交出行</button>
                     </div>
 
-                    <div id="gis-map-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; min-height: 600px; z-index: 1;"></div>
+                    <div class="zoom-controls">
+                        <button class="zoom-btn" onclick="customZoomMap(1)" title="放大"><i class="fa-solid fa-plus"></i></button>
+                        <button class="zoom-btn" onclick="customZoomMap(-1)" title="缩小"><i class="fa-solid fa-minus"></i></button>
+                    </div>
+
+                    <div id="gis-map-container"></div>
 
                     <div id="detail-drawer" class="detail-drawer">
                         <div class="drawer-close" onclick="closeDrawer()"><i class="fa-solid fa-xmark"></i></div>
@@ -273,7 +294,11 @@
             element.classList.add('active');
             document.getElementById(pageId).classList.add('active');
 
-            if(pageId === 'page-map') { if(gisChartInstance) gisChartInstance.resize(); }
+            if(pageId === 'page-map') { 
+                if(gisChartInstance) {
+                    setTimeout(() => gisChartInstance.resize(), 100); 
+                } 
+            }
             if(pageId === 'page-records') loadRecords();
             if(pageId === 'page-users') loadCarOwners(); 
             if(pageId === 'page-lots') loadLots(); 
@@ -284,12 +309,13 @@
         }
 
         // =========================================
-        // 【核心优化】GIS 渲染引擎 (彻底解决滚动消失与卡顿)
+        // 【终极重构】GIS 渲染与地图交互引擎
         // =========================================
         let gisChartInstance = null;
         let gisNodesData = [];
-        let activeMetric = 'occupancy';
-        let isGisInitialized = false; // 新增标记：记录底图是否已经渲染过一次
+        let activeMetric = 'occupancy'; 
+        let isGisInitialized = false; 
+        let currentSelectedNode = null; // 记录当前点击的停车场节点
 
         function initGIS() {
             const container = document.getElementById('gis-map-container');
@@ -297,21 +323,42 @@
             
             gisChartInstance = echarts.init(container);
             
+            // 【核心修复 1】：使用 ResizeObserver 监听容器尺寸变化
+            // 彻底解决 70% 截断和白屏留白问题
+            const resizeObserver = new ResizeObserver(() => {
+                if (gisChartInstance) {
+                    gisChartInstance.resize();
+                }
+            });
+            resizeObserver.observe(container);
+
             gisChartInstance.on('click', function(params) {
                 if(params.data && params.data.raw) {
-                    openDrawer(params.data.raw);
+                    openDrawer(params.data.raw); // 点击小圆点打开左侧抽屉
                 }
             });
             
             loadMapData();
         }
 
+        // 自定义缩放函数：挂载在右下角的 UI 按钮上
+        function customZoomMap(delta) {
+            if(!gisChartInstance) return;
+            const bmapModel = gisChartInstance.getModel().getComponent('bmap');
+            if (bmapModel) {
+                const nativeMap = bmapModel.getBMap();
+                if (delta > 0) {
+                    nativeMap.zoomIn();
+                } else {
+                    nativeMap.zoomOut();
+                }
+            }
+        }
+
         async function loadMapData() {
-            // 只在第一次初始化的时候显示 Loading 遮罩
             if(gisChartInstance && !isGisInitialized) {
                 gisChartInstance.showLoading({text: '地图引擎初始化...', color: '#0071e3', maskColor: 'rgba(251,251,253,0.8)'});
             }
-            
             try {
                 const response = await fetch(`${API_BASE}/gis_map`);
                 const data = await response.json();
@@ -343,15 +390,14 @@
                 let weight = node.occupancy_rate || 10; 
                 let color = '#34c759'; 
 
+                // 数据层点位颜色与左侧面板模式一致
                 if(activeMetric === 'occupancy') {
                     if(node.status === 'yellow') color = '#f5a623';
                     if(node.status === 'red') color = '#e3342f';
-                } else if (activeMetric === 'battery') {
-                    weight = node.battery_berth ? (node.battery_berth * 5) : (node.battery ? node.battery * 5 : 20);
-                    color = '#0071e3';
-                } else if (activeMetric === 'nobarry') {
-                    weight = node.nobarry_berth ? (node.nobarry_berth * 20) : (node.nobarry ? node.nobarry * 20 : 30);
-                    color = '#86868b';
+                } else if (activeMetric === 'drive') {
+                    color = '#0071e3'; // 驾车为科技蓝
+                } else if (activeMetric === 'transit') {
+                    color = '#86868b'; // 公交为高级灰
                 }
 
                 const safeLng = node.location ? node.location[0] : (node.lng || 121.485);
@@ -365,20 +411,19 @@
                 };
             });
 
-            // 【脏检查逻辑】：彻底分离“地图加载”与“数据更新”
             if (!isGisInitialized) {
-                // 【首次加载】：注入全量的百度地图配置
                 const option = {
                     backgroundColor: 'transparent',
                     tooltip: {
                         trigger: 'item', backgroundColor: 'rgba(255,255,255,0.9)', borderColor: 'transparent',
                         textStyle: {color: '#1d1d1f'}, padding: 12,
-                        formatter: p => `<div style="font-weight:600">${p.name}</div><div style="font-size:12px; color:#86868b">点击查看深度资产档案</div>`
+                        formatter: p => `<div style="font-weight:600">${p.name}</div>`
                     },
                     bmap: {
                         center: [121.485, 31.23], 
                         zoom: 13,
-                        roam: true,
+                        // 【核心修复 2】：启用自由移动，禁用滚轮劫持
+                        roam: 'move', 
                         mapStyle: {
                             styleJson: [
                                 { "featureType": "water", "elementType": "all", "stylers": { "color": "#e0e4eb" } },
@@ -395,39 +440,151 @@
                         coordinateSystem: 'bmap', 
                         data: scatterData,
                         symbolSize: val => Math.max(10, Math.sqrt(val[2]) * 2.5),
-                        showEffectOn: 'render',
+                        showEffectOn: 'render', 
                         rippleEffect: { brushType: 'stroke', scale: 3 },
                         label: { show: false }
                     }]
                 };
-                // ⚠️ 绝对不能加 true ！！！
+                
                 gisChartInstance.setOption(option);
-                isGisInitialized = true; // 标记地图已被成功加载
+                isGisInitialized = true; 
             } else {
-                // 【无缝刷新】：由于地图已存在，直接将新的散点数据喂给 ECharts，不碰底图视角！
-                gisChartInstance.setOption({
-                    series: [{
-                        data: scatterData
-                    }]
-                });
+                gisChartInstance.setOption({ series: [{ data: scatterData }] });
             }
         }
 
+        // =========================================
+        // 【核心交互联动】：右上角按钮与左侧详情框交互
+        // =========================================
         function changeGISView(metric, btn) {
             activeMetric = metric;
             document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            renderGIS(); // 切换按钮时，只会触发“无缝刷新”，地图绝对不会闪烁
+            renderGIS(); 
+
+            // 【核心修复 3】：点击右上角的出行按钮时，如果左侧框本来就是展开的，
+            // 则不关闭、不移位，直接原地刷新数据为对应模式的方案！
+            const drawer = document.getElementById('detail-drawer');
+            if (currentSelectedNode && drawer.classList.contains('active')) {
+                openDrawer(currentSelectedNode); 
+            }
         }
 
+        // 折叠面板（Accordion）方案展开/收起控制
+        function toggleRoute(element) {
+            const isExpanded = element.classList.contains('expanded');
+            // 关闭所有方案，确保同一时间只展示一个详情
+            document.querySelectorAll('.route-option').forEach(el => el.classList.remove('expanded'));
+            // 如果原本没有展开，则展开它
+            if (!isExpanded) {
+                element.classList.add('expanded');
+            }
+        }
+
+        // 渲染左侧详情抽屉
         function openDrawer(data) {
+            currentSelectedNode = data; // 标记当前正在查看的节点
             const drawer = document.getElementById('detail-drawer');
             const body = document.getElementById('drawer-body');
             
             const company = data.company || data.company_manage || '上海公共资源管理中心';
             const phone = data.phone || data.complained_tel || '021-12345678';
             const address = data.address || '上海市核心商区';
-            const statusColor = data.status === 'red' ? 'var(--danger)' : (data.status === 'yellow' ? 'var(--warning)' : 'var(--success)');
+            
+            let dynamicContentHtml = '';
+
+            // --- 模式 1：实时饱和度 ---
+            if (activeMetric === 'occupancy') {
+                const statusColor = data.status === 'red' ? 'var(--danger)' : (data.status === 'yellow' ? 'var(--warning)' : 'var(--success)');
+                dynamicContentHtml = `
+                    <div class="info-card">
+                        <div class="info-label">AI 仿真分析 (当前负荷率)</div>
+                        <div class="info-value" style="color: ${statusColor}; font-size: 28px; font-weight: 600;">
+                            ${data.occupancy_rate || 0}%
+                        </div>
+                        <div class="tag-pill tag-green" style="background:#f5f5f7; color:#1d1d1f; border:1px solid var(--border); display:inline-block; padding: 4px 8px; border-radius: 6px; font-size:12px; margin-top:8px;">
+                            ${data.occupied_berth || 0} / ${data.total || data.total_berth || 0} 泊位已用
+                        </div>
+                    </div>
+                    <div class="info-card" style="margin-top: 32px;">
+                        <div class="info-label">基础设施配置</div>
+                        <div class="info-value" style="font-size: 14px; line-height: 2;">
+                            <i class="fa-solid fa-bolt" style="color:var(--accent); width:20px; text-align:center;"></i> 充电专区: <strong>${data.battery_berth || data.battery || 0}</strong> 席<br>
+                            <i class="fa-solid fa-wheelchair" style="color:var(--text-muted); width:20px; text-align:center;"></i> 无障碍关怀: <strong>${data.nobarry_berth || data.nobarry || 0}</strong> 席
+                        </div>
+                    </div>
+                `;
+            } 
+            // --- 模式 2：驾车出行 ---
+            else if (activeMetric === 'drive') {
+                const randomDist = (Math.random() * 4 + 0.5).toFixed(1);
+                const randomMins = Math.floor(randomDist * 4 + 3);
+                const price = data.price_per_hour || data.price || '15.0';
+                dynamicContentHtml = `
+                    <div style="font-size:14px; font-weight:600; margin-bottom:16px; margin-top:24px; color:var(--text-main); border-top:1px solid var(--border-light); padding-top:24px;">
+                        <i class="fa-solid fa-route"></i> 智能导航方案规划
+                    </div>
+                    
+                    <div class="route-option" onclick="toggleRoute(this)">
+                        <div class="route-option-title">
+                            <span><i class="fa-solid fa-bolt" style="color:var(--accent);"></i> 方案一：时间最短</span> 
+                            <span style="color:var(--text-main); font-size:13px;">${randomMins}分钟</span>
+                        </div>
+                        <div class="route-option-desc">总里程 ${randomDist} km | 途经快速路</div>
+                        <div class="route-detail-view">
+                            <strong>详细路线：</strong>前方路口左转进入主干道，行驶 2km 后由匝道驶出，直行 500 米到达 [${data.name}]。
+                            <br><br><span style="color:var(--success);"><i class="fa-solid fa-coins"></i> 预计停车费率：${price} 元/小时</span>
+                            <button class="btn-action" style="width:100%; justify-content:center; margin-top:16px; padding: 10px;">发送至手机导航</button>
+                        </div>
+                    </div>
+
+                    <div class="route-option" onclick="toggleRoute(this)">
+                        <div class="route-option-title">
+                            <span><i class="fa-solid fa-leaf" style="color:var(--success);"></i> 方案二：距离最短</span> 
+                            <span style="color:var(--text-main); font-size:13px;">${randomMins + 7}分钟</span>
+                        </div>
+                        <div class="route-option-desc">总里程 ${(randomDist * 0.8).toFixed(1)} km | 途经拥堵路段</div>
+                        <div class="route-detail-view">
+                            <strong>详细路线：</strong>穿越老城区，途径多个红绿灯路口，最终到达 [${data.name}]。
+                            <br><br><span style="color:var(--success);"><i class="fa-solid fa-coins"></i> 预计停车费率：${price} 元/小时</span>
+                            <button class="btn-action" style="width:100%; justify-content:center; margin-top:16px; padding: 10px;">发送至手机导航</button>
+                        </div>
+                    </div>
+                `;
+            }
+            // --- 模式 3：公交出行 ---
+            else if (activeMetric === 'transit') {
+                const walkDistance = Math.floor(Math.random() * 400 + 100);
+                dynamicContentHtml = `
+                    <div style="font-size:14px; font-weight:600; margin-bottom:16px; margin-top:24px; color:var(--text-main); border-top:1px solid var(--border-light); padding-top:24px;">
+                        <i class="fa-solid fa-train-subway"></i> 绿色低碳接驳方案
+                    </div>
+                    
+                    <div class="route-option" onclick="toggleRoute(this)">
+                        <div class="route-option-title">
+                            <span><i class="fa-solid fa-train" style="color:#bf5b17;"></i> 方案一：地铁换乘</span> 
+                            <span style="color:var(--text-main); font-size:13px;">30分钟</span>
+                        </div>
+                        <div class="route-option-desc">乘坐 地铁2号线 -> 地铁10号线</div>
+                        <div class="route-detail-view">
+                            <strong>换乘指导：</strong>步行至就近地铁站，乘坐 2 号线，换乘 10 号线，于目的地站点出站后步行约 ${walkDistance} 米抵达 [${data.name}]。
+                            <br><br><button class="btn-outline" style="width:100%; justify-content:center; margin-top:16px; padding: 10px;">查看班次时刻表</button>
+                        </div>
+                    </div>
+
+                    <div class="route-option" onclick="toggleRoute(this)">
+                        <div class="route-option-title">
+                            <span><i class="fa-solid fa-bicycle" style="color:var(--warning);"></i> 方案二：公交+骑行</span> 
+                            <span style="color:var(--text-main); font-size:13px;">45分钟</span>
+                        </div>
+                        <div class="route-option-desc">71路中运量 + 共享单车 1.5km</div>
+                        <div class="route-detail-view">
+                            <strong>换乘指导：</strong>乘坐公交车至目标站点，出站后租赁共享单车骑行，目的地的 [${data.name}] 外围设有非机动车停放点。
+                            <br><br><button class="btn-outline" style="width:100%; justify-content:center; margin-top:16px; padding: 10px;">扫码解锁单车</button>
+                        </div>
+                    </div>
+                `;
+            }
 
             body.innerHTML = `
                 <div class="drawer-title">${data.name}</div>
@@ -438,40 +595,23 @@
                     <div class="info-value">${company}</div>
                 </div>
 
-                <div class="info-card">
-                    <div class="info-label">AI 仿真分析 (当前负荷率)</div>
-                    <div class="info-value" style="color: ${statusColor}; font-size: 28px; font-weight: 600;">
-                        ${data.occupancy_rate || 0}%
-                    </div>
-                    <div class="tag-pill tag-green" style="background:#f5f5f7; color:#1d1d1f; border:1px solid var(--border); display:inline-block; padding: 4px 8px; border-radius: 6px; font-size:12px; margin-top:8px;">
-                        ${data.occupied_berth || 0} / ${data.total || data.total_berth || 0} 泊位已用
-                    </div>
-                </div>
-
-                <div class="info-card" style="margin-top: 32px;">
-                    <div class="info-label">基础设施配置</div>
-                    <div class="info-value" style="font-size: 14px; line-height: 2;">
-                        <i class="fa-solid fa-bolt" style="color:var(--accent); width:20px; text-align:center;"></i> 充电专区: <strong>${data.battery_berth || data.battery || 0}</strong> 席<br>
-                        <i class="fa-solid fa-wheelchair" style="color:var(--text-muted); width:20px; text-align:center;"></i> 无障碍关怀: <strong>${data.nobarry_berth || data.nobarry || 0}</strong> 席
-                    </div>
-                </div>
+                ${dynamicContentHtml}
 
                 <div class="info-card" style="margin-top: 40px; border-top: 1px solid var(--border-light); padding-top: 24px;">
                     <div class="info-label">调度与客诉热线</div>
                     <div class="info-value"><i class="fa-solid fa-phone" style="margin-right:8px; color:var(--text-muted);"></i> ${phone}</div>
                 </div>
-
-                <button class="btn-action" style="width: 100%; justify-content:center; margin-top: 24px;" onclick="alert('指令已下发至边缘设备。')">
-                    下发远程调度指令
-                </button>
             `;
-            drawer.classList.add('active');
+            drawer.classList.add('active'); // 弹出左侧抽屉
         }
 
-        function closeDrawer() { document.getElementById('detail-drawer').classList.remove('active'); }
+        function closeDrawer() { 
+            document.getElementById('detail-drawer').classList.remove('active'); 
+            currentSelectedNode = null; // 清除当前焦点
+        }
 
         // =========================================
-        // 业务层 API 调用逻辑
+        // 业务层 API 调用逻辑 (保持绝对完整)
         // =========================================
 
         function manualReleaseGate() {
@@ -702,19 +842,14 @@
         }
 
         // =========================================
-        // 系统初始化入口
+        // 初始化入口
         // =========================================
         window.addEventListener('resize', () => { 
-            if(aiPredictChartInstance) aiPredictChartInstance.resize(); 
             if(gisChartInstance) gisChartInstance.resize();
         });
         
         window.onload = () => {
             initGIS();
-            
-            // 【核心优化】：已经为你注释掉了这行自动刷新代码！
-            // setInterval(loadMapData, 30000); 
-            
             if(document.getElementById('page-records').classList.contains('active')) loadRecords();
         };
     </script>
