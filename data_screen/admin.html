@@ -6,9 +6,9 @@
     <title>智慧停车后台管理云平台</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <script src="https://api.map.baidu.com/api?v=3.0&ak=rOTvJe6VTInuQkUenZfTm1EGzm9PYoCq"></script>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/extension/bmap/bmap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/extension/bmap.min.js"></script>
 
     <script>
         const isAuth = localStorage.getItem("system_auth");
@@ -22,26 +22,12 @@
     </script>
     <style>
         :root {
-            --bg-color: #fbfbfd;
-            --surface: #ffffff;
-            --text-main: #1d1d1f;
-            --text-muted: #86868b;
-            --border: #d2d2d7;
-            --border-light: rgba(0,0,0,0.05);
-            --primary: #000000;
-            --primary-hover: #333333;
-            --accent: #0071e3;
-            --danger: #e3342f;
-            --danger-bg: #fceceb;
-            --success: #34c759;
-            --success-bg: #eaf9ed;
-            --warning: #f5a623;
-            --warning-bg: #fef6e9;
-            --radius-sm: 8px;
-            --radius: 12px;
-            --radius-lg: 16px;
-            --shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
-            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.03);
+            --bg-color: #fbfbfd; --surface: #ffffff; --text-main: #1d1d1f; --text-muted: #86868b;
+            --border: #d2d2d7; --border-light: rgba(0,0,0,0.05); --primary: #000000;
+            --primary-hover: #333333; --accent: #0071e3; --danger: #e3342f; --danger-bg: #fceceb;
+            --success: #34c759; --success-bg: #eaf9ed; --warning: #f5a623; --warning-bg: #fef6e9;
+            --radius-sm: 8px; --radius: 12px; --radius-lg: 16px;
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.04); --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.03);
             --drawer-width: 380px;
         }
 
@@ -112,18 +98,17 @@
         .chart-container { background: var(--surface); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 24px; height: 380px; box-shadow: var(--shadow-sm); }
         .plate-tag { background: #f5f5f7; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); font-family: monospace; color: var(--text-main); font-weight: 600; }
 
-        /* ================= 新增：GIS 视图组件样式 (彻底修复高度塌陷) ================= */
+        /* ================= GIS 视图组件样式 ================= */
         .gis-frame { 
             position: relative; 
             flex: 1; 
-            min-height: 600px; /* 强制给一个底线高度 */
+            min-height: 600px; 
             background: #fbfbfd; 
             border-radius: var(--radius-lg); 
             overflow: hidden; 
             box-shadow: var(--shadow-sm); 
             border: 1px solid var(--border-light); 
         }
-        /* 强制地图容器充满整个 frame，不允许高度变为0 */
         #gis-map-container { 
             position: absolute; 
             top: 0; left: 0; right: 0; bottom: 0; 
@@ -131,7 +116,7 @@
             z-index: 1;
         }
         
-        .view-switcher { position: absolute; top: 24px; left: 24px; z-index: 50; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px); padding: 4px; border-radius: 12px; display: flex; gap: 4px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
+        .view-switcher { position: absolute; top: 24px; left: 24px; z-index: 50; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); padding: 4px; border-radius: 12px; display: flex; gap: 4px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
         .view-btn { padding: 8px 16px; border: none; background: transparent; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
         .view-btn.active { background: var(--primary); color: #fff; }
         
@@ -145,7 +130,7 @@
         .info-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
         .info-value { font-size: 15px; color: var(--text-main); font-weight: 500; }
         
-        /* 隐藏地图版权让UI更干净，必须加上 !important */
+        /* 隐藏地图版权让UI更干净 */
         .BMap_cpyCtrl, .anchorBL { display: none !important; }
 
         @media (max-width: 768px) {
@@ -213,175 +198,66 @@
             </div>
 
             <div id="page-records" class="page">
-                <div class="page-header">
-                    <h2><i class="fa-solid fa-list"></i> 通行管理中心</h2>
-                    <button class="btn-outline" onclick="loadRecords()"><i class="fa-solid fa-rotate-right"></i> 刷新数据</button>
-                </div>
+                <div class="page-header"><h2><i class="fa-solid fa-list"></i> 通行管理中心</h2><button class="btn-outline" onclick="loadRecords()"><i class="fa-solid fa-rotate-right"></i> 刷新数据</button></div>
                 <div class="control-panel">
                     <div class="control-panel-title"><i class="fa-solid fa-sliders"></i> 异常车辆远程处理</div>
                     <input type="text" id="manual-plate" class="control-input" placeholder="输入车牌号 (例：粤B·88888)">
-                    <select id="manual-gate" class="control-input" style="cursor: pointer;">
-                        <option value="东门入口">东门入口</option>
-                        <option value="南门出口">南门出口</option>
-                        <option value="地下VIP入口">地下VIP入口</option>
-                    </select>
+                    <select id="manual-gate" class="control-input" style="cursor: pointer;"><option value="东门入口">东门入口</option><option value="南门出口">南门出口</option><option value="地下VIP入口">地下VIP入口</option></select>
                     <button class="btn-action" onclick="manualReleaseGate()">强制抬杆放行</button>
                 </div>
-
-                <div style="margin-bottom: 16px;">
-                    <input type="text" id="search-record" class="control-input" placeholder="搜索记录 (车牌/ID)..." onkeyup="filterTable()" style="width: 100%; max-width: 400px;">
-                </div>
-                <div class="data-table-wrapper">
-                    <table class="data-table" id="record-table">
-                        <thead><tr><th>记录 ID</th><th>用户 ID</th><th>入场时间</th><th>离场时间</th><th>产生费用</th><th>当前状态</th></tr></thead>
-                        <tbody id="records-tbody"><tr><td colspan="6" style="text-align: center; color: var(--text-muted);">正在同步数据...</td></tr></tbody>
-                    </table>
-                </div>
+                <div style="margin-bottom: 16px;"><input type="text" id="search-record" class="control-input" placeholder="搜索记录 (车牌/ID)..." onkeyup="filterTable()" style="width: 100%; max-width: 400px;"></div>
+                <div class="data-table-wrapper"><table class="data-table" id="record-table"><thead><tr><th>记录 ID</th><th>用户 ID</th><th>入场时间</th><th>离场时间</th><th>产生费用</th><th>当前状态</th></tr></thead><tbody id="records-tbody"><tr><td colspan="6" style="text-align: center; color: var(--text-muted);">正在同步数据...</td></tr></tbody></table></div>
             </div>
 
             <div id="page-users" class="page">
-                <div class="page-header">
-                    <h2><i class="fa-regular fa-id-card"></i> 资质审查</h2>
-                    <button class="btn-outline" onclick="loadCarOwners()"><i class="fa-solid fa-rotate-right"></i> 刷新列表</button>
-                </div>
+                <div class="page-header"><h2><i class="fa-regular fa-id-card"></i> 资质审查</h2><button class="btn-outline" onclick="loadCarOwners()"><i class="fa-solid fa-rotate-right"></i> 刷新列表</button></div>
                 <div class="control-panel">
                     <div class="control-panel-title"><i class="fa-solid fa-user-plus"></i> 新增白名单</div>
-                    <input type="text" id="owner-name" class="control-input" placeholder="车主姓名">
-                    <input type="text" id="owner-car" class="control-input" placeholder="车牌号">
-                    <input type="text" id="owner-phone" class="control-input" placeholder="联系手机号">
-                    <button class="btn-action" onclick="addCarOwner()">提交资质</button>
+                    <input type="text" id="owner-name" class="control-input" placeholder="车主姓名"><input type="text" id="owner-car" class="control-input" placeholder="车牌号"><input type="text" id="owner-phone" class="control-input" placeholder="联系手机号"><button class="btn-action" onclick="addCarOwner()">提交资质</button>
                 </div>
-                <div class="data-table-wrapper">
-                    <table class="data-table" id="owner-table">
-                        <thead><tr><th>ID</th><th>姓名</th><th>车牌号</th><th>手机</th><th>操作</th></tr></thead>
-                        <tbody id="owners-tbody"><tr><td colspan="5" style="text-align: center; color: var(--text-muted);">正在拉取数据...</td></tr></tbody>
-                    </table>
-                </div>
+                <div class="data-table-wrapper"><table class="data-table" id="owner-table"><thead><tr><th>ID</th><th>姓名</th><th>车牌号</th><th>手机</th><th>操作</th></tr></thead><tbody id="owners-tbody"><tr><td colspan="5" style="text-align: center; color: var(--text-muted);">正在拉取数据...</td></tr></tbody></table></div>
             </div>
 
             <div id="page-lots" class="page">
-                <div class="page-header">
-                    <h2><i class="fa-regular fa-building"></i> 车场网络与配置</h2>
-                    <button class="btn-outline" onclick="loadLots()"><i class="fa-solid fa-rotate-right"></i> 同步车场</button>
-                </div>
+                <div class="page-header"><h2><i class="fa-regular fa-building"></i> 车场网络与配置</h2><button class="btn-outline" onclick="loadLots()"><i class="fa-solid fa-rotate-right"></i> 同步车场</button></div>
                 <div class="control-panel">
                     <div class="control-panel-title"><i class="fa-solid fa-plus"></i> 新建停车场</div>
-                    <input type="text" id="lot-name" class="control-input" placeholder="停车场名称">
-                    <input type="text" id="lot-location" class="control-input" placeholder="物理位置">
-                    <input type="number" id="lot-spaces" class="control-input" placeholder="总车位" style="max-width: 120px;">
-                    <input type="number" id="lot-price" class="control-input" placeholder="费率/时" style="max-width: 120px;" step="0.5">
-                    <button class="btn-action" onclick="addLot()">部署上线</button>
+                    <input type="text" id="lot-name" class="control-input" placeholder="停车场名称"><input type="text" id="lot-location" class="control-input" placeholder="物理位置"><input type="number" id="lot-spaces" class="control-input" placeholder="总车位" style="max-width: 120px;"><input type="number" id="lot-price" class="control-input" placeholder="费率/时" style="max-width: 120px;" step="0.5"><button class="btn-action" onclick="addLot()">部署上线</button>
                 </div>
-                <div class="data-table-wrapper">
-                    <table class="data-table" id="lot-table">
-                        <thead><tr><th>编号</th><th>名称</th><th>物理位置</th><th>容量 (空余/总数)</th><th>费率</th><th>操作</th></tr></thead>
-                        <tbody id="lots-tbody"><tr><td colspan="6" style="text-align: center; color: var(--text-muted);">正在拉取数据...</td></tr></tbody>
-                    </table>
-                </div>
+                <div class="data-table-wrapper"><table class="data-table" id="lot-table"><thead><tr><th>编号</th><th>名称</th><th>物理位置</th><th>容量 (空余/总数)</th><th>费率</th><th>操作</th></tr></thead><tbody id="lots-tbody"><tr><td colspan="6" style="text-align: center; color: var(--text-muted);">正在拉取数据...</td></tr></tbody></table></div>
             </div>
 
             <div id="page-risk" class="page">
-                <div class="page-header">
-                    <h2><i class="fa-solid fa-shield"></i> 风控与告警</h2>
-                    <button class="btn-danger" style="color:#fff; background:var(--danger);" onclick="scanZombies()"><i class="fa-solid fa-radar"></i> 扫描僵尸车</button>
-                </div>
-                
+                <div class="page-header"><h2><i class="fa-solid fa-shield"></i> 风控与告警</h2><button class="btn-danger" style="color:#fff; background:var(--danger);" onclick="scanZombies()"><i class="fa-solid fa-radar"></i> 扫描僵尸车</button></div>
                 <div class="control-panel">
                     <div class="control-panel-title" style="color: var(--danger);"><i class="fa-solid fa-ban"></i> 黑名单拦截入库</div>
-                    <input type="text" id="blacklist-plate" class="control-input" placeholder="输入违规车牌">
-                    <input type="text" id="blacklist-reason" class="control-input" placeholder="拦截原因描述">
-                    <button class="btn-danger" onclick="addBlacklist()">加入黑名单</button>
+                    <input type="text" id="blacklist-plate" class="control-input" placeholder="输入违规车牌"><input type="text" id="blacklist-reason" class="control-input" placeholder="拦截原因描述"><button class="btn-danger" onclick="addBlacklist()">加入黑名单</button>
                 </div>
-
                 <h3 style="font-size: 16px; margin: 32px 0 16px 0; display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-lock"></i> 当前布控名单</h3>
-                <div class="data-table-wrapper">
-                    <table class="data-table">
-                        <thead><tr><th>布控时间</th><th>受控车牌</th><th>封禁原因</th><th>拦截记录</th><th>操作</th></tr></thead>
-                        <tbody id="blacklist-tbody"></tbody>
-                    </table>
-                </div>
+                <div class="data-table-wrapper"><table class="data-table"><thead><tr><th>布控时间</th><th>受控车牌</th><th>封禁原因</th><th>拦截记录</th><th>操作</th></tr></thead><tbody id="blacklist-tbody"></tbody></table></div>
             </div>
 
             <div id="page-ev" class="page">
-                <div class="page-header">
-                    <h2><i class="fa-solid fa-bolt"></i> 充电协同监控</h2>
-                    <div style="color: var(--text-muted); font-size: 14px;">总功率: <span style="color:var(--text-main); font-weight:600;">120 kW</span></div>
-                </div>
-
-                <div class="metric-cards">
-                    <div class="m-card"><div class="m-title"><i class="fa-regular fa-circle"></i> 空闲桩位</div><div class="m-value">5</div></div>
-                    <div class="m-card"><div class="m-title"><i class="fa-solid fa-bolt"></i> 正在充电</div><div class="m-value">6</div></div>
-                    <div class="m-card"><div class="m-title"><i class="fa-regular fa-circle-check"></i> 充电完成</div><div class="m-value">2</div></div>
-                    <div class="m-card" style="border-color: var(--danger); background: var(--danger-bg);"><div class="m-title" style="color: var(--danger);"><i class="fa-solid fa-triangle-exclamation"></i> 非法占位告警</div><div class="m-value" style="color: var(--danger);">1</div></div>
-                </div>
-
+                <div class="page-header"><h2><i class="fa-solid fa-bolt"></i> 充电协同监控</h2><div style="color: var(--text-muted); font-size: 14px;">总功率: <span style="color:var(--text-main); font-weight:600;">120 kW</span></div></div>
+                <div class="metric-cards"><div class="m-card"><div class="m-title"><i class="fa-regular fa-circle"></i> 空闲桩位</div><div class="m-value">5</div></div><div class="m-card"><div class="m-title"><i class="fa-solid fa-bolt"></i> 正在充电</div><div class="m-value">6</div></div><div class="m-card"><div class="m-title"><i class="fa-regular fa-circle-check"></i> 充电完成</div><div class="m-value">2</div></div><div class="m-card" style="border-color: var(--danger); background: var(--danger-bg);"><div class="m-title" style="color: var(--danger);"><i class="fa-solid fa-triangle-exclamation"></i> 非法占位告警</div><div class="m-value" style="color: var(--danger);">1</div></div></div>
                 <div class="ev-grid" id="ev-grid"></div>
             </div>
 
             <div id="page-coupon" class="page">
-                <div class="page-header">
-                    <h2><i class="fa-solid fa-ticket"></i> 生态与优惠券</h2>
-                </div>
-                
+                <div class="page-header"><h2><i class="fa-solid fa-ticket"></i> 生态与优惠券</h2></div>
                 <div class="control-panel">
                     <div class="control-panel-title"><i class="fa-solid fa-gift"></i> 生成商户专属券</div>
-                    <select id="coupon-merchant" class="control-input">
-                        <option value="高级餐饮 (A区)">高级餐饮 (A区)</option>
-                        <option value="星级影院 (C区)">星级影院 (C区)</option>
-                        <option value="咖啡厅 (一楼)">咖啡厅 (一楼)</option>
-                    </select>
-                    <select id="coupon-type" class="control-input">
-                        <option value="免费停车 2 小时">免费停车 2 小时</option>
-                        <option value="停车费立减 10 元">停车费立减 10 元</option>
-                        <option value="全天免费 (VIP)">全天免费 (VIP)</option>
-                    </select>
-                    <button class="btn-action" onclick="generateCoupon()">生成并下发二维码</button>
+                    <select id="coupon-merchant" class="control-input"><option value="高级餐饮 (A区)">高级餐饮 (A区)</option><option value="星级影院 (C区)">星级影院 (C区)</option><option value="咖啡厅 (一楼)">咖啡厅 (一楼)</option></select><select id="coupon-type" class="control-input"><option value="免费停车 2 小时">免费停车 2 小时</option><option value="停车费立减 10 元">停车费立减 10 元</option><option value="全天免费 (VIP)">全天免费 (VIP)</option></select><button class="btn-action" onclick="generateCoupon()">生成并下发二维码</button>
                 </div>
-
                 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px;" id="coupon-grid"></div>
             </div>
 
             <div id="page-finance" class="page">
-                <div class="page-header">
-                    <h2><i class="fa-solid fa-microchip"></i> 智能预测中枢</h2>
-                    <button class="btn-outline" onclick="loadAIAndFinance()"><i class="fa-solid fa-rotate-right"></i> 运行推演</button>
-                </div>
-                
-                <div class="metric-cards">
-                    <div class="m-card">
-                        <div class="m-title"><i class="fa-solid fa-wallet"></i> 平台总计营收</div>
-                        <div class="m-value" id="stat-revenue">¥ 0.00</div>
-                    </div>
-                    <div class="m-card">
-                        <div class="m-title"><i class="fa-solid fa-stopwatch"></i> 平均滞留时长</div>
-                        <div class="m-value" id="stat-duration">0.00 h</div>
-                    </div>
-                    <div class="m-card">
-                        <div class="m-title"><i class="fa-solid fa-car"></i> 累计吞吐车次</div>
-                        <div class="m-value" id="stat-records">0</div>
-                    </div>
-                </div>
-
+                <div class="page-header"><h2><i class="fa-solid fa-microchip"></i> 智能预测中枢</h2><button class="btn-outline" onclick="loadAIAndFinance()"><i class="fa-solid fa-rotate-right"></i> 运行推演</button></div>
+                <div class="metric-cards"><div class="m-card"><div class="m-title"><i class="fa-solid fa-wallet"></i> 平台总计营收</div><div class="m-value" id="stat-revenue">¥ 0.00</div></div><div class="m-card"><div class="m-title"><i class="fa-solid fa-stopwatch"></i> 平均滞留时长</div><div class="m-value" id="stat-duration">0.00 h</div></div><div class="m-card"><div class="m-title"><i class="fa-solid fa-car"></i> 累计吞吐车次</div><div class="m-value" id="stat-records">0</div></div></div>
                 <div style="display: flex; gap: 24px; flex-wrap: wrap;">
-                    <div style="flex: 1; min-width: 400px;">
-                        <h3 style="font-size: 16px; margin-bottom: 16px; display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-chart-line"></i> 机器学习：未来 24 小时预测</h3>
-                        <div class="chart-container" id="aiPredictChart"></div>
-                    </div>
-                    
-                    <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column;">
-                        <h3 style="font-size: 16px; margin-bottom: 16px; display:flex; align-items:center; gap:8px;"><i class="fa-regular fa-comments"></i> 策略对话舱</h3>
-                        <div class="control-panel" style="flex-direction: column; align-items: stretch; height: 380px; margin-bottom: 0; padding: 20px;">
-                            <div id="ai-chat-window" style="flex: 1; overflow-y: auto; padding-right: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--border-light);">
-                                <div style="color: var(--text-muted); text-align:center; padding: 20px; font-size: 14px;">
-                                    点击上方“运行推演”唤醒中枢
-                                </div>
-                            </div>
-                            <div style="display: flex; gap: 12px;">
-                                <input type="text" id="ai-chat-input" class="control-input" placeholder="输入指令..." onkeypress="if(event.keyCode==13) sendChatMessage()">
-                                <button class="btn-action" onclick="sendChatMessage()"><i class="fa-solid fa-arrow-up"></i></button>
-                            </div>
-                        </div>
-                    </div>
+                    <div style="flex: 1; min-width: 400px;"><h3 style="font-size: 16px; margin-bottom: 16px; display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-chart-line"></i> 机器学习：未来 24 小时预测</h3><div class="chart-container" id="aiPredictChart"></div></div>
+                    <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column;"><h3 style="font-size: 16px; margin-bottom: 16px; display:flex; align-items:center; gap:8px;"><i class="fa-regular fa-comments"></i> 策略对话舱</h3><div class="control-panel" style="flex-direction: column; align-items: stretch; height: 380px; margin-bottom: 0; padding: 20px;"><div id="ai-chat-window" style="flex: 1; overflow-y: auto; padding-right: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--border-light);"><div style="color: var(--text-muted); text-align:center; padding: 20px; font-size: 14px;">点击上方“运行推演”唤醒中枢</div></div><div style="display: flex; gap: 12px;"><input type="text" id="ai-chat-input" class="control-input" placeholder="输入指令..." onkeypress="if(event.keyCode==13) sendChatMessage()"><button class="btn-action" onclick="sendChatMessage()"><i class="fa-solid fa-arrow-up"></i></button></div></div></div>
                 </div>
             </div>
 
@@ -391,16 +267,12 @@
     <script>
         const API_BASE = 'http://127.0.0.1:8000';
 
-        // =========================================
-        // 核心路由控制 (保持原有不变，适配 GIS 初始化)
-        // =========================================
         function switchPage(pageId, element) {
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
             element.classList.add('active');
             document.getElementById(pageId).classList.add('active');
 
-            // 触发对应页面的加载逻辑
             if(pageId === 'page-map') { if(gisChartInstance) gisChartInstance.resize(); }
             if(pageId === 'page-records') loadRecords();
             if(pageId === 'page-users') loadCarOwners(); 
@@ -412,15 +284,17 @@
         }
 
         // =========================================
-        // 【核心优化】GIS 数字孪生渲染引擎 (已整合补充.txt 增强特性)
+        // 【核心优化】GIS 渲染引擎 (彻底解决滚动消失与卡顿)
         // =========================================
         let gisChartInstance = null;
         let gisNodesData = [];
         let activeMetric = 'occupancy';
+        let isGisInitialized = false; // 新增标记：记录底图是否已经渲染过一次
 
         function initGIS() {
             const container = document.getElementById('gis-map-container');
             if(!container) return;
+            
             gisChartInstance = echarts.init(container);
             
             gisChartInstance.on('click', function(params) {
@@ -433,12 +307,15 @@
         }
 
         async function loadMapData() {
-            if(gisChartInstance) gisChartInstance.showLoading({text: '同步真实接口数据...', color: '#0071e3', maskColor: 'rgba(251,251,253,0.8)'});
+            // 只在第一次初始化的时候显示 Loading 遮罩
+            if(gisChartInstance && !isGisInitialized) {
+                gisChartInstance.showLoading({text: '地图引擎初始化...', color: '#0071e3', maskColor: 'rgba(251,251,253,0.8)'});
+            }
+            
             try {
                 const response = await fetch(`${API_BASE}/gis_map`);
                 const data = await response.json();
                 
-                // 【增强容错】：即使接口通了但返回空数据，我们也在前端加上备用模拟数据
                 if (!data || data.length === 0) {
                      gisNodesData = [
                         {name: '上海中心大厦停车场', total: 2000, type: 'office', occupancy_rate: 88, status: 'red', lng: 121.511, lat: 31.239},
@@ -450,7 +327,6 @@
                 renderGIS();
             } catch (e) {
                 console.error("无法加载 GIS 数据:", e);
-                // 极端离线断网情况下的假数据
                 gisNodesData = [
                     {name: '接口断开(离线点1)', location: [121.47, 31.23], occupancy_rate: 40, status: 'green'},
                     {name: '接口断开(离线点2)', location: [121.50, 31.24], occupancy_rate: 90, status: 'red'}
@@ -465,7 +341,7 @@
 
             const scatterData = gisNodesData.map(node => {
                 let weight = node.occupancy_rate || 10; 
-                let color = '#34c759'; // green
+                let color = '#34c759'; 
 
                 if(activeMetric === 'occupancy') {
                     if(node.status === 'yellow') color = '#f5a623';
@@ -478,58 +354,70 @@
                     color = '#86868b';
                 }
 
+                const safeLng = node.location ? node.location[0] : (node.lng || 121.485);
+                const safeLat = node.location ? node.location[1] : (node.lat || 31.230);
+
                 return {
                     name: node.name,
-                    // 兼容 location 或 lng/lat 数据结构
-                    value: [node.location ? node.location[0] : node.lng, node.location ? node.location[1] : node.lat, weight],
+                    value: [safeLng, safeLat, weight],
                     raw: node,
                     itemStyle: { color: color, shadowBlur: 15, shadowColor: 'rgba(0,0,0,0.1)' }
                 };
             });
 
-            // 【重点修复】：引入了真实的 bmap 组件，并设置浅色清爽的地图风格
-            const option = {
-                backgroundColor: 'transparent',
-                tooltip: {
-                    trigger: 'item', backgroundColor: 'rgba(255,255,255,0.9)', borderColor: 'transparent',
-                    textStyle: {color: '#1d1d1f'}, padding: 12,
-                    formatter: p => `<div style="font-weight:600">${p.name}</div><div style="font-size:12px; color:#86868b">点击查看深度资产档案</div>`
-                },
-                bmap: {
-                    center: [121.485, 31.23], // 设置地图中心点（上海）
-                    zoom: 13,
-                    roam: true,
-                    mapStyle: {
-                        styleJson: [
-                            { "featureType": "water", "elementType": "all", "stylers": { "color": "#e0e4eb" } },
-                            { "featureType": "land", "elementType": "all", "stylers": { "color": "#fbfbfd" } },
-                            { "featureType": "highway", "elementType": "all", "stylers": { "color": "#ffffff" } },
-                            { "featureType": "arterial", "elementType": "geometry.fill", "stylers": { "color": "#ffffff" } },
-                            { "featureType": "poi", "elementType": "all", "stylers": { "visibility": "off" } },
-                            { "featureType": "building", "elementType": "all", "stylers": { "visibility": "off" } }
-                        ]
-                    }
-                },
-                series: [{
-                    type: 'effectScatter',
-                    coordinateSystem: 'bmap', // 弃用原有的 cartesian2d 空白坐标系，激活百度地图
-                    data: scatterData,
-                    symbolSize: val => Math.max(10, Math.sqrt(val[2]) * 2.5),
-                    showEffectOn: 'render',
-                    rippleEffect: { brushType: 'stroke', scale: 3 },
-                    label: { show: false }
-                }]
-            };
-            
-            // 为了防止 ECharts 旧数据残留报错，这里使用第二个参数 true 强行覆盖配置
-            gisChartInstance.setOption(option, true);
+            // 【脏检查逻辑】：彻底分离“地图加载”与“数据更新”
+            if (!isGisInitialized) {
+                // 【首次加载】：注入全量的百度地图配置
+                const option = {
+                    backgroundColor: 'transparent',
+                    tooltip: {
+                        trigger: 'item', backgroundColor: 'rgba(255,255,255,0.9)', borderColor: 'transparent',
+                        textStyle: {color: '#1d1d1f'}, padding: 12,
+                        formatter: p => `<div style="font-weight:600">${p.name}</div><div style="font-size:12px; color:#86868b">点击查看深度资产档案</div>`
+                    },
+                    bmap: {
+                        center: [121.485, 31.23], 
+                        zoom: 13,
+                        roam: true,
+                        mapStyle: {
+                            styleJson: [
+                                { "featureType": "water", "elementType": "all", "stylers": { "color": "#e0e4eb" } },
+                                { "featureType": "land", "elementType": "all", "stylers": { "color": "#fbfbfd" } },
+                                { "featureType": "highway", "elementType": "all", "stylers": { "color": "#ffffff" } },
+                                { "featureType": "arterial", "elementType": "geometry.fill", "stylers": { "color": "#ffffff" } },
+                                { "featureType": "poi", "elementType": "all", "stylers": { "visibility": "off" } },
+                                { "featureType": "building", "elementType": "all", "stylers": { "visibility": "off" } }
+                            ]
+                        }
+                    },
+                    series: [{
+                        type: 'effectScatter',
+                        coordinateSystem: 'bmap', 
+                        data: scatterData,
+                        symbolSize: val => Math.max(10, Math.sqrt(val[2]) * 2.5),
+                        showEffectOn: 'render',
+                        rippleEffect: { brushType: 'stroke', scale: 3 },
+                        label: { show: false }
+                    }]
+                };
+                // ⚠️ 绝对不能加 true ！！！
+                gisChartInstance.setOption(option);
+                isGisInitialized = true; // 标记地图已被成功加载
+            } else {
+                // 【无缝刷新】：由于地图已存在，直接将新的散点数据喂给 ECharts，不碰底图视角！
+                gisChartInstance.setOption({
+                    series: [{
+                        data: scatterData
+                    }]
+                });
+            }
         }
 
         function changeGISView(metric, btn) {
             activeMetric = metric;
             document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            renderGIS();
+            renderGIS(); // 切换按钮时，只会触发“无缝刷新”，地图绝对不会闪烁
         }
 
         function openDrawer(data) {
@@ -583,7 +471,7 @@
         function closeDrawer() { document.getElementById('detail-drawer').classList.remove('active'); }
 
         // =========================================
-        // 以下完全保留您原有的所有核心业务逻辑
+        // 业务层 API 调用逻辑
         // =========================================
 
         function manualReleaseGate() {
@@ -823,7 +711,10 @@
         
         window.onload = () => {
             initGIS();
-            setInterval(loadMapData, 30000); // GIS 每30秒同步一次
+            
+            // 【核心优化】：已经为你注释掉了这行自动刷新代码！
+            // setInterval(loadMapData, 30000); 
+            
             if(document.getElementById('page-records').classList.contains('active')) loadRecords();
         };
     </script>
