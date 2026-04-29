@@ -45,14 +45,25 @@ app.add_middleware(
 def sync_shanghai_data():
     """对接上海市大数据中心 XML 接口"""
     API_URL = "https://data.sh.gov.cn/interface/O5915184132025224/58041" 
-    TOKEN = "c2b1a4da8abf581f8d2210ef0dc72cb8" # 请替换为真实 Token
+    TOKEN = "c2b1a4da8abf581f8d2210ef0dc72cb8"
     
-    headers = {"content-type": "application/xml", "token": TOKEN}
+    headers = {
+        "content-type": "application/xml", 
+        "token": TOKEN,
+        # 【修复】：必须伪装合法浏览器，否则防火墙秒切断 (10054)
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" 
+    }
     payload = "<map></map>"
     
     try:
-        # 参考接口说明 docx 的调用方式
-        response = requests.post(API_URL, headers=headers, data=payload, timeout=20)
+        # 【修复】：显式声明 proxies 为 None，强制国内直连，绕过 7897 等全局代理节点
+        response = requests.post(
+            API_URL, 
+            headers=headers, 
+            data=payload, 
+            timeout=20,
+            proxies={"http": None, "https": None} 
+        )
         if response.status_code == 200:
             xml_dict = xmltodict.parse(response.content)
             # 解析 <result><data><Result> 层级
@@ -111,23 +122,25 @@ def get_gis_map():
     """
     对接上海市公共数据开放平台的真实停车场接口
     """
-    # 1. 替换为你申请的真实上海公共数据 API 地址
-    # 示例: https://api.shanghai.gov.cn/xxxxx/parking_realtime
+  
     REAL_API_URL = "https://data.sh.gov.cn/interface/O5915184132025224/58041" 
     
     # 2. 构建请求头，突破防火墙与鉴权
     headers = {
-        # 伪装成正常的谷歌浏览器，防止被识别为 Python 爬虫
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         
-        # 【关键】把你在上海数据平台申请的免费密钥填在这里！
-        # 有的平台叫 Authorization，有的叫 AppCode，具体看官方 API 文档
+
         "Authorization": "c2b1a4da8abf581f8d2210ef0dc72cb8" 
     }
     
     try:
-        # 发送请求，设置 5 秒超时防止卡死
-        response = requests.get(REAL_API_URL, headers=headers, timeout=5)
+        # 同样在这里加上 proxies={"http": None, "https": None}
+        response = requests.get(
+            REAL_API_URL, 
+            headers=headers, 
+            timeout=5,
+            proxies={"http": None, "https": None}
+        )
         
         # 如果请求成功 (HTTP 200)
         if response.status_code == 200:
