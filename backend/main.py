@@ -42,68 +42,84 @@ app.add_middleware(
 # =========================================================
 #             1. 真实接口同步引擎 (Requirement 7)
 # =========================================================
+# backend/main.py (替换原有的 sync_shanghai_data 和调度器部分)
+
 def sync_shanghai_data():
-    """对接上海市大数据中心 XML 接口"""
+    """对接上海市大数据中心 XML 接口，并将真实数据持久化至 SQLite"""
     API_URL = "https://data.sh.gov.cn/interface/O5915184132025224/58041" 
     TOKEN = "c2b1a4da8abf581f8d2210ef0dc72cb8"
     
     headers = {
         "content-type": "application/xml", 
         "token": TOKEN,
-        # 【修复】：必须伪装合法浏览器，否则防火墙秒切断 (10054)
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" 
     }
     payload = "<map></map>"
     
+    # 获取数据库会话
+    db = SessionLocal()
     try:
-        # 【修复】：显式声明 proxies 为 None，强制国内直连，绕过 7897 等全局代理节点
         response = requests.post(
             API_URL, 
             headers=headers, 
             data=payload, 
-            timeout=20,
+            timeout=30,
             proxies={"http": None, "https": None} 
         )
         if response.status_code == 200:
             xml_dict = xmltodict.parse(response.content)
-            # 解析 <result><data><Result> 层级
             records = xml_dict.get('result', {}).get('data', {}).get('Result', [])
             if not isinstance(records, list): records = [records]
             
-            global LIVE_SHANGHAI_DATA
-            new_data = []
             for r in records:
+                # 过滤已删除的数据
                 if r.get('jhpt_delete') == '1': continue
                 
+                pid = str(r.get('parking_id', ''))
+                if not pid: continue
+
                 # 简单 POI 判定逻辑
                 name = r.get('parking_name', '')
                 p_type = "commercial"
                 if any(x in name for x in ["大厦", "办公", "写字楼"]): p_type = "office"
                 elif any(x in name for x in ["小区", "公寓", "苑"]): p_type = "residential"
 
-                new_data.append({
-                    "id": r.get('parking_id'),
-                    "name": name,
-                    "address": r.get('address'),
-                    "total": int(r.get('total_berth', 0) or 0),
-                    "battery": int(r.get('battery_berth', 0) or 0),
-                    "nobarry": int(r.get('nobarry_berth', 0) or 0),
-                    "company": r.get('company_manage'),
-                    "phone": r.get('complained_tel'),
-                    "type": p_type,
-                    "lng": 121.47 + (hash(r.get('parking_id', '')) % 100) / 1000.0,
-                    "lat": 31.23 + (hash(name) % 100) / 1000.0
-                })
-            LIVE_SHANGHAI_DATA = new_data
+                # 查找数据库中是否已有该停车场，执行 Upsert 逻辑
+                lot = db.query(models.ParkingLot).filter(models.ParkingLot.parking_id == pid).first()
+                if not lot:
+                    lot = models.ParkingLot(parking_id=pid)
+                    db.add(lot)
+                
+                # 更新官方最新鲜的数据
+                lot.parking_name = name
+                lot.address = r.get('address')
+                lot.company_manage = r.get('company_manage')
+                lot.complained_tel = r.get('complained_tel')
+                lot.parking_nature = p_type
+                
+                # 数字型字段安全转换
+                try:
+                    lot.total_berth = int(r.get('total_berth', 0) or 0)
+                    lot.battery_berth = int(r.get('battery_berth', 0) or 0)
+                    lot.nobarry_berth = int(r.get('nobarry_berth', 0) or 0)
+                except ValueError:
+                    pass
+
+            db.commit()
+            print(f"✅ 每日同步完成！已成功将上海开放平台数据写入 SQLite 数据库。")
     except Exception as e:
-        print(f"Sync Failed: {e}")
+        db.rollback()
+        print(f"❌ 数据同步失败: {e}")
+    finally:
+        db.close()
 
 # 定时任务调度
 scheduler = BackgroundScheduler()
 @app.on_event("startup")
 def startup_event():
+    # 启动时可以先拉取一次（可选），然后设定为每天早上 8:00 执行
     sync_shanghai_data()
-    scheduler.add_job(sync_shanghai_data, 'cron', hour=3) # 凌晨3点同步更新
+    scheduler.add_job(sync_shanghai_data, 'cron', hour=8, minute=0) # 修改为早晨 8 点更新
     scheduler.start()
 
 # =========================================================
@@ -118,88 +134,47 @@ def get_tide_rate(p_type: str, hour: int) -> float:
     return 0.85 if 18 <= hour <= 21 else 0.50
 
 @app.get("/gis_map")
-def get_gis_map():
+def get_gis_map(db: Session = Depends(get_db)):
     """
-    对接上海市公共数据开放平台的真实停车场接口
+    直接从 SQLite 数据库获取已同步的真实上海市停车场基座数据，
+    用于前端高保真 GIS 渲染。
     """
-  
-    REAL_API_URL = "https://data.sh.gov.cn/interface/O5915184132025224/58041" 
+    # 获取数据库中最新更新的停车场（此处限制前 500 个避免前端渲染卡顿，可根据需要调整）
+    real_lots = db.query(models.ParkingLot).filter(models.ParkingLot.total_berth > 0).limit(500).all()
     
-    # 2. 构建请求头，突破防火墙与鉴权
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    formatted_data = []
+    for lot in real_lots:
+        total_berth = lot.total_berth or 100
+        # 实时车位可以结合实际业务逻辑或 available_spaces 字段
+        empty_berth = lot.available_spaces if lot.available_spaces is not None else int(total_berth * 0.2) 
+        occupied = total_berth - empty_berth
+        occupancy_rate = round((occupied / total_berth) * 100, 1) if total_berth > 0 else 0
         
+        status = 'green'
+        if occupancy_rate > 85:
+            status = 'red'
+        elif occupancy_rate > 60:
+            status = 'yellow'
 
-        "Authorization": "c2b1a4da8abf581f8d2210ef0dc72cb8" 
-    }
+        # 基于行政区或唯一 ID 生成相对固定的模拟经纬度，保障 GIS 地图分布合理
+        lng = 121.47 + (hash(lot.parking_id) % 100) / 1000.0
+        lat = 31.23 + (hash(lot.parking_name) % 100) / 1000.0
+
+        formatted_data.append({
+            "id": lot.parking_id or lot.platform_id,
+            "name": lot.parking_name,
+            "lng": lng, 
+            "lat": lat,   
+            "total": total_berth,
+            "occupied_berth": occupied,
+            "occupancy_rate": occupancy_rate,
+            "status": status,
+            "type": lot.parking_nature or "commercial", 
+            "company": lot.company_manage or "上海市停车管理中心",
+            "price": lot.price_per_hour or 10
+        })
     
-    try:
-        # 同样在这里加上 proxies={"http": None, "https": None}
-        response = requests.get(
-            REAL_API_URL, 
-            headers=headers, 
-            timeout=5,
-            proxies={"http": None, "https": None}
-        )
-        
-        # 如果请求成功 (HTTP 200)
-        if response.status_code == 200:
-            api_data = response.json()
-            
-            # 3. 剥洋葱：找到官方数据里的列表列表 (需要根据官方文档调整键名)
-            # 假设官方的数据放在 api_data['data']['parkingList'] 里
-            real_records = api_data.get('data', {}).get('parkingList', [])
-            
-            if real_records:
-                formatted_data = []
-                # 4. 字段映射：把政府的数据字段，翻译成你前端能看懂的字段！
-                for item in real_records:
-                    # 获取总车位和空余车位，算出已用和饱和度
-                    total_berth = int(item.get("total_berth", 100))
-                    empty_berth = int(item.get("empty_berth", 0))
-                    occupied = total_berth - empty_berth
-                    occupancy_rate = round((occupied / total_berth) * 100, 1) if total_berth > 0 else 0
-                    
-                    # 根据饱和度判定颜色状态
-                    status = 'green'
-                    if occupancy_rate > 85:
-                        status = 'red'
-                    elif occupancy_rate > 60:
-                        status = 'yellow'
-
-                    # 将一条真实数据塞入列表
-                    formatted_data.append({
-                        "id": item.get("parking_id", "未知ID"),
-                        "name": item.get("parking_name", "真实停车场"),
-                        "lng": float(item.get("longitude", 121.48)), # 经度
-                        "lat": float(item.get("latitude", 31.23)),   # 纬度
-                        "total": total_berth,
-                        "occupied_berth": occupied,
-                        "occupancy_rate": occupancy_rate,
-                        "status": status,
-                        "type": "commercial", # 如果官方没有类型，默认给个商业区
-                        "company": item.get("operator", "上海市停车管理中心"),
-                        "price": item.get("price", "官方指导价")
-                    })
-                
-                # 如果成功解析到了数据，直接返回给前端！
-                return formatted_data
-                
-    except Exception as e:
-        print(f"⚠️ 真实 API 请求失败，原因: {e}")
-
-    # ========================================================
-    # 5. 商业级兜底策略 (Fallback)
-    # 如果你的网断了、上海平台的服务器崩了、或者你的密钥过期了，
-    # 绝对不能让老板/导师看到一个白板地图！这时候返回高保真假数据救场。
-    # ========================================================
-    print("🔄 正在启用本地高保真模拟数据兜底...")
-    fallback_data = [
-        {"id": 'SH-001', "name": '上海中心大厦车库', "type": 'commercial', "total": 2000, "occupied_berth": 1850, "occupancy_rate": 92.5, "status": 'red', "lng": 121.511, "lat": 31.239, "company": '陆家嘴物业', "price": 20},
-        {"id": 'SH-002', "name": '日月光中心(徐汇店)', "type": 'commercial', "total": 800, "occupied_berth": 600, "occupancy_rate": 75.0, "status": 'yellow', "lng": 121.476, "lat": 31.213, "company": '日月光管理处', "price": 15},
-        # ... 你可以加上更多的兜底数据
-    ]
-    return fallback_data
+    return formatted_data
   
 
 models.Base.metadata.create_all(bind=engine)
@@ -240,9 +215,11 @@ class LotUpdate(BaseModel):
     price_per_hour: float
     total_spaces: int
 
+# 修改点 1：获取所有车场
 @app.get("/lots")  
 def lots(db: Session = Depends(get_db)):
-    return db.query(models.ParkingLot).order_by(models.ParkingLot.id.desc()).all()
+    # 修复：使用 internal_id 排序
+    return db.query(models.ParkingLot).order_by(models.ParkingLot.internal_id.desc()).all()
 
 @app.post("/lots")
 def create_lot(lot: LotCreate, db: Session = Depends(get_db)):
@@ -255,10 +232,13 @@ def create_lot(lot: LotCreate, db: Session = Depends(get_db)):
     db.refresh(new_lot)
     return new_lot
 
+# 修改点 2：更新车场
 @app.put("/lots/{lot_id}")
 def update_lot(lot_id: int, lot_data: LotUpdate, db: Session = Depends(get_db)):
-    lot = db.query(models.ParkingLot).filter(models.ParkingLot.id == lot_id).first()
+    # 修复：使用 internal_id 进行条件过滤
+    lot = db.query(models.ParkingLot).filter(models.ParkingLot.internal_id == lot_id).first()
     if not lot: raise HTTPException(status_code=404, detail="未找到该车场")
+    
     diff = lot_data.total_spaces - lot.total_spaces
     lot.total_spaces = lot_data.total_spaces
     lot.available_spaces = max(0, lot.available_spaces + diff)
@@ -266,9 +246,11 @@ def update_lot(lot_id: int, lot_data: LotUpdate, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "车场配置更新成功"}
 
+# 修改点 3：删除车场
 @app.delete("/lots/{lot_id}")
 def delete_lot(lot_id: int, db: Session = Depends(get_db)):
-    lot = db.query(models.ParkingLot).filter(models.ParkingLot.id == lot_id).first()
+    # 修复：使用 internal_id 进行条件过滤
+    lot = db.query(models.ParkingLot).filter(models.ParkingLot.internal_id == lot_id).first()
     if not lot: raise HTTPException(status_code=404, detail="未找到该车场")
     db.delete(lot)
     db.commit()
