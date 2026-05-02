@@ -133,6 +133,13 @@ def get_tide_rate(p_type: str, hour: int) -> float:
         return 0.30 if 8 <= hour <= 19 else 0.95
     return 0.85 if 18 <= hour <= 21 else 0.50
 
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 @app.get("/gis_map")
 def get_gis_map(db: Session = Depends(get_db)):
     """
@@ -194,13 +201,6 @@ def stats():
 @app.get("/predict")
 def predict():
     return predict_day()
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 # =========================================================
 #             车场与计费规则管理 (ParkingLot 表)
