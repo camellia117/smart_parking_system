@@ -110,42 +110,56 @@ def get_db():
     try: yield db
     finally: db.close()
 
+
+import time
+
+# 定义全局缓存
+gis_cache = {"data": None, "timestamp": 0}
+CACHE_TTL = 300  # 缓存 5 分钟
+
 @app.get("/gis_map")
 def get_gis_map(db: Session = Depends(get_db)):
-    real_lots = db.query(models.ParkingLot).filter(models.ParkingLot.total_berth > 0).limit(500).all()
+    global gis_cache
+    now = time.time()
+    
+    # 检查缓存是否有效
+    if gis_cache["data"] and (now - gis_cache["timestamp"]) < CACHE_TTL:
+        return gis_cache["data"]
+
+    # 限制查询数量并提高性能
+    real_lots = db.query(models.ParkingLot).filter(models.ParkingLot.total_berth > 0).limit(300).all()
     formatted_data = []
     current_hour = datetime.datetime.now().hour
     
     for lot in real_lots:
         total_berth = lot.total_berth or 100
         base_rate = get_tide_rate(lot.parking_nature or "commercial", current_hour)
-        fluctuation = random.uniform(-0.15, 0.15)
-        final_rate = min(max(base_rate + fluctuation, 0.1), 0.98)
-        
+        final_rate = min(max(base_rate + random.uniform(-0.1, 0.1), 0.1), 0.98)
         occupied = int(total_berth * final_rate)
         occupancy_rate = round((occupied / total_berth) * 100, 1)
         
-        status = 'green'
-        if occupancy_rate > 85: status = 'red'
-        elif occupancy_rate > 60: status = 'yellow'
-
+        # 预先计算样式
+        status = 'red' if occupancy_rate > 85 else ('yellow' if occupancy_rate > 60 else 'green')
+        
         lng = 121.47 + (hash(str(lot.parking_id)) % 100) / 1000.0
         lat = 31.23 + (hash(str(lot.parking_name)) % 100) / 1000.0
 
         formatted_data.append({
-            "id": lot.parking_id or getattr(lot, 'internal_id', 1), # 紧急修复属性访问
+            "id": lot.parking_id or 0,
             "name": lot.parking_name,
             "lng": lng, "lat": lat,   
             "total": total_berth,
             "occupied_berth": occupied,
             "occupancy_rate": occupancy_rate,
             "status": status,
-            "type": lot.parking_nature or "commercial", 
             "company": lot.company_manage or "上海市公共停车",
-            "price": lot.price_per_hour or 15.0,
-            "battery_berth": lot.battery_berth,
-            "nobarry_berth": lot.nobarry_berth
+            "battery_berth": lot.battery_berth or 0,
+            "nobarry_berth": lot.nobarry_berth or 0
         })
+    
+    # 更新缓存
+    gis_cache["data"] = formatted_data
+    gis_cache["timestamp"] = now
     return formatted_data
   
 models.Base.metadata.create_all(bind=engine)
