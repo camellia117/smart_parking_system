@@ -36,7 +36,7 @@
             color: var(--text-main); 
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
             display: flex; flex-direction: column; min-height: 100vh;
-            overflow: hidden; /* 强制大屏不滚动 */
+            overflow: hidden; 
         }
 
         /* 顶部星舰导航栏 */
@@ -72,11 +72,9 @@
             transform: translateY(20px);
         }
         
-        /* 面板四角高亮科技感 */
         .panel::before { content: ''; position: absolute; top: 0; left: 0; width: 20px; height: 2px; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
         .panel::after { content: ''; position: absolute; bottom: 0; right: 0; width: 20px; height: 2px; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
 
-        /* 面板加载动画延迟，营造依次亮起的启动感 */
         .col-left .panel:nth-child(1) { animation-delay: 0.1s; }
         .col-left .panel:nth-child(2) { animation-delay: 0.3s; }
         .col-left .panel:nth-child(3) { animation-delay: 0.5s; }
@@ -91,46 +89,54 @@
         .panel-title { padding: 16px 20px 0 20px; font-size: 15px; font-weight: 600; color: var(--accent); display: flex; align-items: center; gap: 10px; flex-shrink: 0; text-transform: uppercase; letter-spacing: 1px; }
         .panel-title i { color: var(--text-main); text-shadow: 0 0 5px var(--accent); }
 
-        .panel-content { flex: 1; position: relative; padding: 10px; min-height: 0; }
-        .chart { width: 100%; height: 100%; }
+        .panel-content { flex: 1; position: relative; padding: 10px; min-height: 0; display: flex; flex-direction: column; }
+        .chart { width: 100%; height: 100%; flex: 1; }
 
-        /* ================= C位：中央核心反应堆 (饱和度监控) ================= */
+        /* ================= C位优化：中央核心反应堆 ================= */
         .core-panel {
             border: 2px solid rgba(0, 240, 255, 0.4);
             box-shadow: inset 0 0 50px rgba(0, 240, 255, 0.1), 0 0 30px rgba(0, 240, 255, 0.2);
             background: radial-gradient(circle at center, rgba(0, 240, 255, 0.05) 0%, transparent 70%);
         }
-        .core-title {
-            justify-content: center; font-size: 20px; text-shadow: 0 0 15px var(--accent); padding-top: 24px;
-        }
-        /* HUD 准星装饰 */
-        .hud-target { position: absolute; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
-        .hud-target::before { content:''; position:absolute; top:20%; left:5%; width:20px; height:20px; border-top:2px solid var(--accent); border-left:2px solid var(--accent); opacity: 0.5; }
-        .hud-target::after { content:''; position:absolute; bottom:20%; right:5%; width:20px; height:20px; border-bottom:2px solid var(--accent); border-right:2px solid var(--accent); opacity: 0.5; }
-
-        /* ================= 右上角：战术雷达与数据集成块 ================= */
-        .tactical-hub { display: flex; flex-direction: column; gap: 10px; padding: 10px; height: 100%; }
+        .core-title { justify-content: center; font-size: 20px; text-shadow: 0 0 15px var(--accent); padding-top: 24px; }
         
+        /* 弱化 HUD 准星，防止干扰数据 */
+        .hud-target { position: absolute; width: 100%; height: 100%; pointer-events: none; z-index: 0; opacity: 0.2; }
+        .hud-target::before { content:''; position:absolute; top:20%; left:5%; width:20px; height:20px; border-top:2px solid var(--accent); border-left:2px solid var(--accent); }
+        .hud-target::after { content:''; position:absolute; bottom:20%; right:5%; width:20px; height:20px; border-bottom:2px solid var(--accent); border-right:2px solid var(--accent); }
+
+        /* 新增：C位核心聚合数据概览 */
+        .core-summary {
+            display: flex;
+            justify-content: space-around;
+            padding: 20px 0;
+            margin: 0 40px;
+            border-bottom: 1px solid rgba(0, 240, 255, 0.1);
+            z-index: 1;
+        }
+        .summary-item { text-align: center; }
+        .summary-item .label { font-size: 14px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+        .summary-item .value { font-size: 36px; font-weight: 700; color: var(--text-main); text-shadow: 0 0 15px var(--accent); font-family: 'Courier New', Courier, monospace; }
+        .summary-item .value.warn { color: var(--danger); text-shadow: 0 0 15px var(--danger); }
+
+        /* ================= 其他模块样式维持不变 ================= */
+        .tactical-hub { display: flex; flex-direction: column; gap: 10px; padding: 10px; height: 100%; }
         .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; flex-shrink: 0; }
         .metric-box { background: rgba(0,240,255,0.05); border: 1px solid var(--border); border-radius: 6px; padding: 12px 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: inset 0 0 10px rgba(0,240,255,0.1); }
         .m-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; }
         .m-value { font-size: 20px; font-weight: 700; color: var(--accent); text-shadow: 0 0 8px var(--accent); font-family: 'Courier New', Courier, monospace; }
 
         .radar-wrapper { flex: 1; display: flex; justify-content: center; align-items: center; position: relative; min-height: 160px; }
-        
-        /* 动态雷达扫描特效 */
         .radar-map { width: 140px; height: 140px; border-radius: 50%; border: 1px solid var(--accent); position: relative; box-shadow: 0 0 20px rgba(0,240,255,0.2), inset 0 0 20px rgba(0,240,255,0.2); background: rgba(0, 240, 255, 0.02); }
         .radar-map::before { content: ''; position: absolute; top: 15%; left: 15%; width: 70%; height: 70%; border-radius: 50%; border: 1px dashed rgba(0,240,255,0.5); }
         .radar-map::after { content: ''; position: absolute; top: 35%; left: 35%; width: 30%; height: 30%; border-radius: 50%; border: 1px solid rgba(0,240,255,0.3); }
         
-        /* 扫描光晕 */
         .radar-scanner { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; background: conic-gradient(from 0deg, transparent 70%, rgba(0,240,255,0.6) 100%); transform-origin: center; animation: radarScan 2s linear infinite; }
         @keyframes radarScan { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         .radar-line { position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: rgba(0,240,255,0.4); }
         .radar-line-v { position: absolute; top: 0; left: 50%; width: 1px; height: 100%; background: rgba(0,240,255,0.4); }
         
-        /* 呼吸红点 */
         .car-dot { position: absolute; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 8px var(--accent); animation: pulseDot 1.5s infinite; }
         .car-dot.danger { background: var(--danger); box-shadow: 0 0 10px var(--danger); animation: pulseDanger 1s infinite; }
         @keyframes pulseDot { 0% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0.3; transform: scale(0.8); } }
@@ -140,7 +146,6 @@
         .dev-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-main); }
         .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 8px var(--success); }
 
-        /* ================= 实时流水动态列表 ================= */
         .scroll-wrapper { width: 100%; height: 100%; overflow: hidden; position: relative; mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent); -webkit-mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent); }
         .scroll-list { list-style: none; animation: scrollUp 15s linear infinite; position: absolute; width: 100%; padding: 0 10px; }
         .scroll-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(0,240,255,0.1); font-size: 13px; }
@@ -182,6 +187,18 @@
             <div class="panel core-panel" style="flex: 1;">
                 <div class="hud-target"></div>
                 <div class="panel-title core-title"><i class="fa-solid fa-globe"></i> 城市资产孪生 · 核心负荷监控</div>
+                
+                <div class="core-summary">
+                    <div class="summary-item">
+                        <div class="label">全网总泊位 (容量)</div>
+                        <div class="value" id="val-core-total">0</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">综合饱和度 (预警)</div>
+                        <div class="value" id="val-core-rate">0%</div>
+                    </div>
+                </div>
+
                 <div class="panel-content"><div id="chart-lots" class="chart"></div></div>
             </div>
         </div>
@@ -244,16 +261,14 @@
         const cTraffic = echarts.init(document.getElementById('chart-traffic'));
         const cType = echarts.init(document.getElementById('chart-type'));
         const cRev = echarts.init(document.getElementById('chart-revenue'));
-        const cLots = echarts.init(document.getElementById('chart-lots')); // 这个现在在C位
+        const cLots = echarts.init(document.getElementById('chart-lots')); 
         const cUtil = echarts.init(document.getElementById('chart-util'));
 
         window.addEventListener('resize', () => {
             cTraffic.resize(); cType.resize(); cRev.resize(); cLots.resize(); cUtil.resize();
         });
 
-        // ================= 暗黑赛博朋克风格图表配置 =================
-
-        // 1. 车辆画像 (环形图发光)
+        // 1. 车辆画像
         cType.setOption({
             tooltip: { trigger: 'item', backgroundColor: 'rgba(10,15,25,0.9)', textStyle: { color: '#00f0ff' }, borderColor: '#00f0ff' },
             legend: { top: 'bottom', textStyle: { color: '#8B9BB4', fontSize: 10 }, icon: 'circle' },
@@ -266,7 +281,7 @@
             }]
         });
 
-        // 2. 周转效能 (仪表盘荧光)
+        // 2. 周转效能
         cUtil.setOption({
             series: [{
                 type: 'gauge', center: ['50%', '60%'], radius: '95%',
@@ -279,7 +294,7 @@
             }]
         });
 
-        // 3. 潮汐预测 (发光激光线)
+        // 3. 潮汐预测
         function renderTraffic(hours, data) {
             cTraffic.setOption({
                 tooltip: { trigger: 'axis', backgroundColor: 'rgba(10,15,25,0.9)', borderColor: '#00f0ff', textStyle: { color: '#00f0ff' } },
@@ -295,7 +310,7 @@
             });
         }
 
-        // 4. 营收结构 (霓虹柱状图)
+        // 4. 营收结构
         function renderRevenue() {
             cRev.setOption({
                 tooltip: { trigger: 'item', backgroundColor: 'rgba(10,15,25,0.9)', borderColor: '#00ff9d', textStyle: { color: '#00ff9d' } },
@@ -310,25 +325,58 @@
             });
         }
 
-        // 5. C位核心：饱和度监控 (3D荧光柱体效果)
+        // 5. C位优化核心：水平进度条式柱状图，解决名字过长堆叠问题
         function renderLots(names, usages) {
             cLots.setOption({
-                tooltip: { trigger: 'axis', backgroundColor: 'rgba(10,15,25,0.9)', borderColor: '#00f0ff', textStyle: { color: '#00f0ff' } },
-                grid: { left: '3%', right: '3%', bottom: '8%', top: '15%', containLabel: true },
-                xAxis: { type: 'category', data: names, axisLabel: { color: '#8B9BB4', fontSize: 12, interval: 0, rotate: 15 }, axisLine: { lineStyle: { color: 'rgba(0,240,255,0.3)' } }, axisTick: {show:false} },
-                yAxis: { type: 'value', max: 100, splitLine: { lineStyle: { color: 'rgba(0,240,255,0.1)', type: 'dashed' } }, axisLabel: { color: '#8B9BB4' } },
+                tooltip: { 
+                    trigger: 'axis', 
+                    axisPointer: { type: 'shadow' },
+                    backgroundColor: 'rgba(10,15,25,0.9)', 
+                    borderColor: '#00f0ff', 
+                    textStyle: { color: '#00f0ff' },
+                    formatter: '{b} 饱和度: {c}%'
+                },
+                grid: { left: '3%', right: '8%', bottom: '5%', top: '5%', containLabel: true },
+                xAxis: { 
+                    type: 'value', 
+                    max: 100, 
+                    splitLine: { show: true, lineStyle: { color: 'rgba(0,240,255,0.05)', type: 'dashed' } }, 
+                    axisLabel: { show: false } 
+                },
+                // 将类别放在 Y 轴，长名字自动适应且不再重叠
+                yAxis: { 
+                    type: 'category', 
+                    data: names, 
+                    inverse: true, // 确保第一项在最上方
+                    axisLabel: { color: '#e0faff', fontSize: 13, fontWeight: 'bold' }, 
+                    axisLine: { show: false }, 
+                    axisTick: { show: false } 
+                },
                 series: [{
-                    type: 'bar', data: usages, barWidth: '40%',
+                    type: 'bar', 
+                    data: usages, 
+                    barWidth: '35%', // 适中宽度，具有“能量条”质感
+                    showBackground: true, // 显示轨道背景
+                    backgroundStyle: { color: 'rgba(0,240,255,0.05)', borderRadius: [0, 4, 4, 0] },
                     itemStyle: { 
-                        borderRadius: [6, 6, 0, 0], 
+                        borderRadius: [0, 4, 4, 0], 
                         color: function(p) { 
-                            if(p.value > 85) return new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset: 0, color: '#ff007b'}, {offset: 1, color: 'rgba(255,0,123,0.1)'}]);
-                            return new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset: 0, color: '#00f0ff'}, {offset: 1, color: 'rgba(0,240,255,0.1)'}]);
+                            // 高危变红，正常为青蓝色渐变
+                            if(p.value > 85) return new echarts.graphic.LinearGradient(1, 0, 0, 0, [{offset: 0, color: '#ff007b'}, {offset: 1, color: 'rgba(255,0,123,0.1)'}]);
+                            return new echarts.graphic.LinearGradient(1, 0, 0, 0, [{offset: 0, color: '#00f0ff'}, {offset: 1, color: 'rgba(0,240,255,0.1)'}]);
                         },
-                        shadowBlur: 15,
-                        shadowColor: function(p) { return p.value > 85 ? 'rgba(255,0,123,0.8)' : 'rgba(0,240,255,0.8)'; }
+                        shadowBlur: 10,
+                        shadowColor: function(p) { return p.value > 85 ? 'rgba(255,0,123,0.5)' : 'rgba(0,240,255,0.5)'; }
                     },
-                    label: { show: true, position: 'top', formatter: '{c}%', color: '#fff', textShadow: '0 0 5px #00f0ff', fontSize: 14 }
+                    label: { 
+                        show: true, 
+                        position: 'right', 
+                        formatter: '{c}%', 
+                        color: function(p) { return p.value > 85 ? '#ff007b' : '#00f0ff'; },
+                        fontSize: 14,
+                        fontWeight: 'bold',
+                        fontFamily: 'Courier New'
+                    }
                 }]
             });
         }
@@ -337,7 +385,6 @@
         function renderList(records) {
             const ul = document.getElementById('realtime-list');
             ul.innerHTML = '';
-            // 复制两遍实现完美无缝循环
             [...records, ...records].forEach(item => {
                 const color = item.type === 'out' ? 'var(--warning)' : 'var(--accent)';
                 ul.innerHTML += `
@@ -352,7 +399,7 @@
         const mockDb = {
             tHours: Array.from({length:24}, (_,i)=>`${i}:00`),
             tVols: [15, 10, 5, 2, 8, 30, 80, 150, 180, 120, 90, 85, 95, 110, 130, 190, 220, 160, 100, 70, 50, 30, 20, 18],
-            lNames: ['上海中心', '环球金融', '金茂大厦', '国金中心', '正大广场', '陆家嘴'],
+            lNames: ['上海中心大厦', '环球金融中心', '金茂大厦', '国金中心', '正大广场', '陆家嘴中心绿地'],
             lUsg: [92, 78, 65, 88, 45, 95],
             recs: [ { plate: '沪A·D8888', time: '刚才', type: 'in' }, { plate: '沪C·66666', time: '1分钟前', type: 'out' }, { plate: '粤B·99999', time: '5分钟前', type: 'out' }, { plate: '京A·00000', time: '8分钟前', type: 'in' }, { plate: '苏E·12345', time: '10分钟前', type: 'in' } ]
         };
@@ -365,10 +412,35 @@
             catch(e) { renderTraffic(mockDb.tHours, mockDb.tVols); }
 
             try {
-                const lots = await (await fetch(`${API_BASE}/lots`)).json(); let total = 0, names = [], usg = [];
-                lots.forEach(l => { total += l.available_spaces; names.push(l.name.substring(0,6)); usg.push(Math.round(((l.total_spaces - l.available_spaces)/l.total_spaces)*100)); });
-                document.getElementById('val-spaces').innerText = total; renderLots(names.reverse(), usg.reverse());
-            } catch(e) { document.getElementById('val-spaces').innerText = "1,086"; renderLots(mockDb.lNames, mockDb.lUsg); }
+                const lots = await (await fetch(`${API_BASE}/lots`)).json(); 
+                let totalSpaces = 0;
+                let usedSpaces = 0;
+                let names = [], usg = [];
+                
+                lots.forEach(l => { 
+                    totalSpaces += l.total_spaces;
+                    usedSpaces += (l.total_spaces - l.available_spaces);
+                    // 不再强行截断名字，水平条形图完全放得下
+                    names.push(l.name); 
+                    usg.push(Math.round(((l.total_spaces - l.available_spaces)/l.total_spaces)*100)); 
+                });
+                
+                document.getElementById('val-spaces').innerText = (totalSpaces - usedSpaces);
+                
+                // 更新中心汇总数据
+                document.getElementById('val-core-total').innerText = totalSpaces.toLocaleString();
+                let coreRate = totalSpaces > 0 ? Math.round((usedSpaces/totalSpaces)*100) : 0;
+                let rateDom = document.getElementById('val-core-rate');
+                rateDom.innerText = coreRate + '%';
+                if(coreRate > 85) rateDom.classList.add('warn'); else rateDom.classList.remove('warn');
+
+                renderLots(names, usg);
+            } catch(e) { 
+                document.getElementById('val-spaces').innerText = "1,086"; 
+                document.getElementById('val-core-total').innerText = "8,450";
+                document.getElementById('val-core-rate').innerText = "82%";
+                renderLots(mockDb.lNames, mockDb.lUsg); 
+            }
 
             try {
                 const r = await (await fetch(`${API_BASE}/records`)).json();
@@ -378,7 +450,6 @@
             renderRevenue();
         }
 
-        // 初次加载与定时刷新
         fetchAllData(); 
         setInterval(fetchAllData, 15000);
 

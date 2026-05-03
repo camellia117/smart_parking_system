@@ -350,33 +350,91 @@ def login(req: LoginReq, db: Session = Depends(get_db)):
 
 import os
 from dotenv import load_dotenv
+
+import requests
+
 load_dotenv()  
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-PROXIES = {"http": "http://127.0.0.1:7897", "https": "http://127.0.0.1:7897"}
+
+# =========================================================
+#             大模型智能决策引擎 (已切换至：字节跳动-豆包大模型)
+# =========================================================
+
+DOUBAO_API_KEY = os.getenv("DOUBAO_API_KEY")
+DOUBAO_MODEL_ENDPOINT = os.getenv("DOUBAO_MODEL_ENDPOINT")
+
+# 豆包 API (兼容 OpenAI 标准接口)
+DOUBAO_API_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
 
 class AIAdviceRequest(BaseModel):
-    peak_hour: int; max_volume: int
+    peak_hour: int
+    max_volume: int
 
 @app.post("/ai_advice")
-def get_gemini_advice(req: AIAdviceRequest):
+def get_doubao_advice(req: AIAdviceRequest):
+    """生成基于预测数据的运营建议"""
     try:
-        prompt = f"你是一个智慧停车系统的 AI 运营专家。当前预测 {req.peak_hour}:00 达到峰值（预计 {req.max_volume} 辆）。请给简短运营建议。"
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
-        response = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, proxies=PROXIES, timeout=15.0, verify=False)
-        return {"advice": response.json()['candidates'][0]['content']['parts'][0]['text']}
-    except Exception as e: return {"advice": f"异常：{str(e)}"}
+        prompt = f"你是一个智慧停车系统的 AI 运营专家。当前预测 {req.peak_hour}:00 达到峰值（预计 {req.max_volume} 辆）。请给出一段简短、专业的运营和疏导建议。"
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {DOUBAO_API_KEY}"
+        }
+        
+        data = {
+            "model": DOUBAO_MODEL_ENDPOINT,
+            "messages": [
+                {"role": "system", "content": "你是一个专业的智慧停车调度 AI 大脑。"},
+                {"role": "user", "content": prompt}
+            ]
+        }
+        
+        # 国内模型直连，不再需要 proxies，速度更快
+        response = requests.post(DOUBAO_API_URL, headers=headers, json=data, timeout=15.0)
+        response.raise_for_status() # 检查 HTTP 错误
+        
+        # 解析 OpenAI 标准格式返回值
+        reply = response.json()['choices'][0]['message']['content']
+        return {"advice": reply}
+        
+    except Exception as e: 
+        return {"advice": f"豆包大模型接入异常：{str(e)}"}
 
 class ChatMessage(BaseModel):
-    role: str; text: str
+    role: str
+    text: str
+    
 class ChatRequest(BaseModel):
-    history: List[ChatMessage]; message: str               
+    history: List[ChatMessage]
+    message: str               
 
 @app.post("/ai_chat")
-def get_gemini_chat(req: ChatRequest):
+def get_doubao_chat(req: ChatRequest):
+    """处理持续的对话请求"""
     try:
-        contents = [{"role": m.role, "parts": [{"text": m.text}]} for m in req.history]
-        contents.append({"role": "user", "parts": [{"text": req.message}]})
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
-        response = requests.post(url, json={"contents": contents}, proxies=PROXIES, timeout=20.0, verify=False)
-        return {"reply": response.json()['candidates'][0]['content']['parts'][0]['text']}
-    except Exception as e: return {"reply": f"网络异常：{str(e)}"}
+        # 将前端的 role (user/model) 映射为豆包兼容的 role (user/assistant)
+        messages = [{"role": "system", "content": "你是一个专业的智慧停车管理系统的 AI 助手，请基于停车管理、调度、财务分析等专业视角回答用户问题。"}]
+        
+        for m in req.history:
+            role = "assistant" if m.role == "model" else "user"
+            messages.append({"role": role, "content": m.text})
+            
+        messages.append({"role": "user", "content": req.message})
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {DOUBAO_API_KEY}"
+        }
+        
+        data = {
+            "model": DOUBAO_MODEL_ENDPOINT,
+            "messages": messages
+        }
+        
+        response = requests.post(DOUBAO_API_URL, headers=headers, json=data, timeout=20.0)
+        response.raise_for_status()
+        
+        reply = response.json()['choices'][0]['message']['content']
+        return {"reply": reply}
+        
+    except Exception as e: 
+        return {"reply": f"网络异常或豆包 API 错误：{str(e)}"}
