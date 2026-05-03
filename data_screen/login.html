@@ -119,7 +119,7 @@
 
         async function loadCaptcha() {
             try {
-                const res = await fetch("http://127.0.0.1:8000/get_captcha/");
+                const res = await fetch("http://101.132.235.100:8000/get_captcha/");
                 const data = await res.json();
                 document.getElementById('captcha-img').src = data.image;
                 currentCaptchaId = data.captcha_id;
@@ -149,7 +149,7 @@
             err.style.color = "var(--text-muted)";
 
             try {
-                const res = await fetch("http://127.0.0.1:8000/send_login_sms/", {
+                const res = await fetch("http://101.132.235.100:8000/send_login_sms/", {
                     method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ username: u, password: p, captcha_id: currentCaptchaId, captcha_text: c })
                 });
@@ -193,7 +193,7 @@
             err.style.color = "var(--text-muted)";
 
             try {
-                const res = await fetch("http://127.0.0.1:8000/login/", {
+                const res = await fetch("http://101.132.235.100:8000/login/", {
                     method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ username: u, sms_code: sms }) 
                 });
@@ -209,7 +209,7 @@
                     
                     setTimeout(() => {
                         if (data.role === "dev" || data.role === "root") {
-                            window.location.href = 'http://127.0.0.1:8501/?auth_token=dev_granted';
+                            window.location.href = 'http://101.132.235.100:8501/?auth_token=dev_granted';
                         } else if (data.role === "screen") {
                             window.location.href = 'screen.html';
                         } else {
@@ -238,7 +238,7 @@
             btn.disabled = true;
             
             try {
-                const res = await fetch(`http://127.0.0.1:8000/send_code/?phone=${phone}`, { method: 'POST' });
+                const res = await fetch(`http://101.132.235.100:8000/send_code/?phone=${phone}`, { method: 'POST' });
                 const data = await res.json();
                 
                 if (res.ok) {
@@ -280,7 +280,7 @@
             }
 
             try {
-                const res = await fetch("http://127.0.0.1:8000/forgot_password/", {
+                const res = await fetch("http://101.132.235.100:8000/forgot_password/", {
                     method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ phone: phone, new_password: newPass, code: code })
                 });

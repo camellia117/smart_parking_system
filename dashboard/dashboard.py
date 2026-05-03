@@ -103,7 +103,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 后端 API 基础地址
-API_URL = "http://127.0.0.1:8000"
+API_URL = "http://101.132.235.100:8000"
 
 # ================= 页面鉴权拦截 (防越权访问) =================
 if "is_authenticated" not in st.session_state:
@@ -118,7 +118,7 @@ if not st.session_state.is_authenticated:
     st.markdown("### <i class='fa-solid fa-lock' style='color:#86868b; margin-right:8px;'></i> 访问受限", unsafe_allow_html=True)
     st.markdown("<p style='color: #86868b; font-size: 14px;'>系统检测到您正试图越权访问开发者控制台。出于数据安全考虑，请先通过统一身份认证中心验证您的身份。</p>", unsafe_allow_html=True)
     st.markdown("""
-        <a href="http://127.0.0.1:5500/data_screen/login.html" style="display: inline-block; margin-top: 16px; padding: 10px 20px; background: #1d1d1f; color: #fff; text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: 500;">
+        <a href="http://101.132.235.100:5500/login.html" style="display: inline-block; margin-top: 16px; padding: 10px 20px; background: #1d1d1f; color: #fff; text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: 500;">
             前往统一登录
         </a>
     """, unsafe_allow_html=True)
@@ -179,10 +179,10 @@ st.sidebar.markdown("<h4 style='color: #86868b; font-size: 11px; text-transform:
 
 st.sidebar.markdown("""
     <div style="display: flex; flex-direction: column;">
-        <a href="http://127.0.0.1:5500/data_screen/admin.html" target="_blank" class="apple-link">
+        <a href="http://101.132.235.100:5500/admin.html" target="_blank" class="apple-link">
             <i class="fa-solid fa-server"></i> 业务管理后台
         </a>
-        <a href="http://127.0.0.1:5500/data_screen/screen.html" target="_blank" class="apple-link">
+        <a href="http://101.132.235.100:5500/screen.html" target="_blank" class="apple-link">
             <i class="fa-solid fa-desktop"></i> 调度监控大屏
         </a>
     </div>
