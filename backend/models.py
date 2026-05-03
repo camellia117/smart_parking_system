@@ -75,3 +75,10 @@ class SystemUser(Base):
     password = Column(String)  
     role = Column(String) 
     phone = Column(String, unique=True, index=True, nullable=True)
+    
+class WeatherHistory(Base):
+    __tablename__ = "weather_history"
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(String, index=True)  # 存储日期字符串，如 '2024-01-18'
+    weather_text = Column(String)      # 存储 '多云到阴局部地区有小雨'
+    is_rainy = Column(Integer)         # 预处理好的数字特征：1为雨雪，0为晴阴
