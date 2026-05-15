@@ -644,19 +644,50 @@
         // 业务层 API 调用逻辑 (全量保留不删减)
         // =========================================
 
-        function manualReleaseGate() {
-            const plate = document.getElementById('manual-plate').value;
-            const gate = document.getElementById('manual-gate').value;
-            if(!plate) { alert("请先输入需要放行的车牌号。"); return; }
-            const btn = document.querySelector('#page-records .btn-action');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 处理中...';
-            setTimeout(() => {
-                alert(`指令成功执行。\n放行通道：${gate}\n放行车辆：${plate}\n道闸已抬起。`);
-                document.getElementById('manual-plate').value = '';
-                btn.innerHTML = originalText;
-            }, 800);
+        async function manualReleaseGate() {
+    const plate = document.getElementById('manual-plate').value.trim();
+    const gate = document.getElementById('manual-gate').value;
+    
+    if(!plate) { 
+        alert("请先输入需要放行的车牌号。"); 
+        return; 
+    }
+
+    const btn = document.querySelector('#page-records .btn-action');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 正在同步数据库...';
+
+    try {
+        // 1. 调用后端接口将数据写入 SQLite
+        const response = await fetch(`${API_BASE}/records`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                plate: plate,
+                gate: gate
+            })
+        });
+
+        if (response.ok) {
+            alert(`指令成功执行。\n放行通道：${gate}\n放行车辆：${plate}\n数据已成功记入系统。`);
+            
+            // 清空输入框
+            document.getElementById('manual-plate').value = '';
+
+            // 2. 核心步骤：重新拉取最新的数据库记录
+            // 这会更新全量的 allRecords 数组，使搜索功能能够匹配到新数据
+            await loadRecords(); 
+
+        } else {
+            alert("后端服务响应异常，请检查 API 状态。");
         }
+    } catch (error) {
+        console.error("放行操作失败:", error);
+        alert("网络连接失败，请确认后端服务是否启动。");
+    } finally {
+        btn.innerHTML = originalText;
+    }
+}
 
         let allRecords = []; 
         async function loadRecords() {

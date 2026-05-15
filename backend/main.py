@@ -33,7 +33,7 @@ mock_login_sms_codes = {}
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -211,9 +211,25 @@ def lots(db: Session = Depends(get_db)):
 
 @app.post("/lots")
 def create_lot(lot: LotCreate, db: Session = Depends(get_db)):
-    new_lot = models.ParkingLot(name=lot.name, location=lot.location, total_spaces=lot.total_spaces, price_per_hour=lot.price_per_hour, available_spaces=lot.total_spaces)
-    db.add(new_lot); db.commit()
-    return new_lot
+    # 将前端传来的 LotCreate 字段映射到真实的数据库模型字段名
+    new_lot = models.ParkingLot(
+        parking_name=lot.name,          # 数据库字段是 parking_name
+        address=lot.location,           # 数据库字段是 address
+        total_berth=lot.total_spaces,   # 数据库字段是 total_berth
+        price_per_hour=lot.price_per_hour, 
+        available_spaces=lot.total_spaces # 初始空余即为总数
+    )
+    
+    try:
+        db.add(new_lot)
+        db.commit()
+        db.refresh(new_lot)
+        return new_lot
+    except Exception as e:
+        db.rollback()
+        # 打印具体的错误到日志，方便排查是否还有其他问题（如数据库权限）
+        print(f"创建停车场失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="数据库写入失败，请检查字段匹配或权限")
 
 @app.put("/lots/{lot_id}")
 def update_lot(lot_id: int, lot_data: LotUpdate, db: Session = Depends(get_db)):
@@ -233,7 +249,25 @@ def delete_lot(lot_id: int, db: Session = Depends(get_db)):
     if not lot: raise HTTPException(status_code=404, detail="未找到该车场")
     db.delete(lot); db.commit()
     return {"message": "已成功下线"}
+# 定义请求模型
+class RecordCreate(BaseModel):
+    plate: str
+    gate: str
 
+@app.post("/records")
+def create_manual_record(data: RecordCreate, db: Session = Depends(get_db)):
+    # 模拟创建一个通行记录
+    # 在实际场景中，你应该根据车牌号查找用户 ID
+    new_record = models.Record(
+        user_id=999,  # 模拟一个临时用户ID
+        enter_time=datetime.datetime.now(),
+        leave_time=None,
+        fee=0.0
+    )
+    db.add(new_record)
+    db.commit()
+    db.refresh(new_record)
+    return {"message": "放行记录已存入数据库", "id": new_record.id}
 # =========================================================
 #             客户与白名单车辆管理
 # =========================================================
