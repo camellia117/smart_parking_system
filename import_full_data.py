@@ -24,15 +24,28 @@ def import_all_columns(excel_path):
     db = SessionLocal()
     try:
         print(f"开始读取全量 Excel 数据文件: {excel_path}")
-        # 【核心修改】这里改成了 read_excel 读取真实的 .xlsx 文件
         df = pd.read_excel(excel_path)
         df = df.fillna("") # 空值填充
         
         success_count = 0
+        skip_count = 0
         
         for index, row in df.iterrows():
+            platform_id_val = str(row.get('id', '')).strip()
+            
+            # 【新增防御 1】过滤空数据行
+            if not platform_id_val or platform_id_val == "nan":
+                continue
+                
+            # 【新增防御 2】检查数据库是否已存在该 ID (防止 UNIQUE 报错)
+            existing_lot = db.query(ParkingLot).filter(ParkingLot.platform_id == platform_id_val).first()
+            if existing_lot:
+                skip_count += 1
+                continue
+
+            # 构建新的停车场对象
             lot = ParkingLot(
-                platform_id=str(row.get('id', '')),
+                platform_id=platform_id_val,
                 parking_id=str(row.get('parking_id', '')),
                 parking_name=str(row.get('parking_name', '')),
                 address=str(row.get('address', '')),
@@ -70,11 +83,14 @@ def import_all_columns(excel_path):
             )
             
             db.add(lot)
-            if index > 0 and index % 200 == 0:
+            success_count += 1
+            
+            # 分批提交，提高速度并防止内存溢出
+            if success_count > 0 and success_count % 200 == 0:
                 db.commit()
                 
         db.commit()
-        print(f"✅ 全字段导入成功！共处理 {len(df)} 条真实的场库数据。")
+        print(f"✅ 导入完成！共成功新增 {success_count} 条数据，自动跳过了 {skip_count} 条重复/脏数据。")
 
     except Exception as e:
         db.rollback()
@@ -84,10 +100,12 @@ def import_all_columns(excel_path):
 
 if __name__ == "__main__":
     init_db()
-    # 【核心修改】使用 r"" 原生字符串来处理 Windows 路径，防止反斜杠被转义
-    FILE_PATH = r"D:\毕业设计\公共停车场基础数据.xlsx"
+    
+    # 动态获取当前脚本所在目录
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    FILE_PATH = os.path.join(BASE_DIR, "公共停车场基础数据.xlsx")
     
     if os.path.exists(FILE_PATH):
         import_all_columns(FILE_PATH)
     else:
-        print(f"报错：系统确实找不到文件 {FILE_PATH}，请检查该路径下文件是否存在且名字拼写正确。")
+        print(f"报错：系统确实找不到文件 {FILE_PATH}，请检查该路径下文件是否存在。")
