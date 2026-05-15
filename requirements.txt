@@ -1,5 +1,10 @@
 fastapi
 uvicorn
+passlib
+bcrypt
+passlib[bcrypt]
+bcrypt>=4.0.0
+python-dotenv
 sqlalchemy
 pandas
 streamlit
